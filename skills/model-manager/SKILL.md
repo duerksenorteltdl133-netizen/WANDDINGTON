@@ -1,137 +1,77 @@
 ---
 name: model-manager
-description: Install, update, list, and manage gene perturbation models (GEARS, scGPT, scVI, Pertpy, CPA, SAMS-VAE). Use when the user asks to install a model, check what's available, download weights, or switch between models.
+description: Install, update, list, and manage gene perturbation models. Use when the user asks to install a model, check what's available, run a model, or compare model results.
 ---
 
 # Model Manager
 
-Manage the lifecycle of gene perturbation models in the local workspace.
+Manage single-cell perturbation model backends for Waddington.
 
-## Supported models
+## Registry
 
-| Model | Source | Conda env | Install method |
-|-------|--------|-----------|----------------|
-| **GEARS** | GitHub: snap-stanford/GEARS | `waddington-gears` | pip |
-| **scGPT** | GitHub: bowang-lab/scGPT | `waddington-scgpt` | pip |
-| **scVI** | PyPI: scvi-tools | `waddington-scvi` | pip |
-| **Pertpy** | PyPI: pertpy | `waddington-scvi` (shared) | pip |
-| **CPA** | GitHub: facebookresearch/CPA | `waddington-cpa` | pip |
-| **SAMS-VAE** | GitHub: insitro/SAMS-VAE | `waddington-sams` | pip |
+```
+workspace/registry.json          — master backend list (11 backends)
+workspace/models/<name>/         — workspace directory per backend
+workspace/evaluation/            — shared evaluation utilities (evaluation_engine.py, dataparser.py)
+```
 
-## Commands
+## Registered Backends
 
-### List installed models
+| model_id | display_name | conda_env | has run_task | has results |
+|---|---|---|---|---|
+| gears | GEARS | gears_env | ✓ | ✓ |
+| scgpt | scGPT | scgpt_env | ✓ | ✓ |
+| cpa | CPA | cpa_env | ✓ | ✓ |
+| txpert | TxPert | txpert_env | ✓ | ✓ |
+| scouter | Scouter | scouter_env | ✓ | ✓ |
+| state | STATE | state_env | ✓ | ✓ |
+| systema_matching_mean | Systema (matching mean) | systema_env | ✓ | ✓ |
+| systema_nonctl_mean | Systema (non-ctrl mean) | systema_env | ✓ | ✓ |
+| scpram | scPRAM | scpram_env | ✓ | — |
+| perturbgraph | PerturbGraph | sc_env | ✓ | ✓ |
+
+Always read `workspace/registry.json` first to get exact paths and conda env names.
+
+## Running a Backend
+
+Every `run_task.py` was written for the old project and has two hardcoded dependencies:
+1. `PROJECT_ROOT = Path("/home/duanyu/Python/Myproject/single_cell_agent")`
+2. `from sc_agent.tools.evaluation_engine import ...`
+
+Set PYTHONPATH to fix the import before running:
+
 ```bash
-conda env list | grep waddington
-ls workspace/models/
+WADDINGTON_WS=/home/duanyu/Python/SKILL/waddington/workspace
+export PYTHONPATH="$WADDINGTON_WS/evaluation:$PYTHONPATH"
+
+cd $WADDINGTON_WS/models/<name>_workspace
+conda run -n <conda_env> python run_task.py
 ```
 
-### Install a model
+For a different dataset, generate a new run script rather than modifying `run_task.py`.
 
-**Step 1: Check if already installed**
+## Reading Existing Results
+
 ```bash
-conda env list | grep waddington-<model>
-ls workspace/models/<model>
+cat workspace/models/<name>_workspace/results/<name>_metrics.json
 ```
 
-**Step 2: Create conda environment**
-```bash
-conda create -n waddington-<model> python=3.10 -y
-```
+Key fields in every metrics JSON:
+- `primary_metrics.pearson` — mean Pearson r across all perturbations
+- `primary_metrics.pearson_de` — Pearson r on top-20 DEGs
+- `primary_metrics.mse` / `mae` / `r2`
+- `native_metrics` — model-specific raw metrics
 
-**Step 3: Install the model**
-See model-specific instructions below.
+## Comparing Models
 
-**Step 4: Verify installation**
-```bash
-conda run -n waddington-<model> python -c "import <package>; print('<model> OK')"
-```
+Read all available `results/*.json` files and produce a Markdown table sorted by `pearson_de` descending. Include: model_id, pearson, pearson_de, mse, r2.
 
-**Step 5: Write environment YAML**
-```bash
-conda run -n waddington-<model> conda env export > workspace/envs/<model>.yml
-```
+## Installing a New Model
 
-## Model-specific installation
-
-### GEARS
-```bash
-conda run -n waddington-gears pip install torch torchvision torchaudio
-conda run -n waddington-gears pip install torch-geometric
-git clone https://github.com/snap-stanford/GEARS workspace/models/gears
-conda run -n waddington-gears pip install -e workspace/models/gears
-# Download pretrained weights
-conda run -n waddington-gears python -c "
-from gears import PertData, GEARS
-pert_data = PertData('./workspace/data')
-"
-```
-
-### scGPT
-```bash
-conda run -n waddington-scgpt pip install scgpt
-# Download pretrained checkpoint (whole-human or specific)
-mkdir -p workspace/models/scgpt/checkpoints
-# Checkpoint download URL from scGPT GitHub releases
-wget -P workspace/models/scgpt/checkpoints/ \
-  https://github.com/bowang-lab/scGPT/releases/download/v0.2.1/whole_human.zip
-conda run -n waddington-scgpt python -c "import scgpt; print('scGPT OK')"
-```
-
-### scVI + Pertpy (shared environment)
-```bash
-conda run -n waddington-scvi pip install scvi-tools pertpy scanpy anndata
-conda run -n waddington-scvi python -c "import scvi, pertpy, scanpy; print('scVI+Pertpy OK')"
-```
-
-### CPA
-```bash
-git clone https://github.com/facebookresearch/CPA workspace/models/cpa
-conda run -n waddington-cpa pip install -e workspace/models/cpa
-conda run -n waddington-cpa python -c "import cpa; print('CPA OK')"
-```
-
-## Model info command
-
-When user asks about a model, provide:
-- GitHub URL and last commit date
-- Paper citation (title, authors, venue, DOI)
-- Supported perturbation types (single gene KO, combo, drug)
-- Benchmark performance on Norman et al. 2019 (if published)
-- Known limitations
-- Whether pretrained weights are available
-
-## Workspace layout
-
-```
-workspace/
-├── models/
-│   ├── gears/          # git clone of GEARS
-│   ├── scgpt/          # pip-installed, + checkpoints/
-│   ├── cpa/            # git clone of CPA
-│   └── sams-vae/       # git clone of SAMS-VAE
-├── envs/
-│   ├── gears.yml       # exported conda environment
-│   ├── scgpt.yml
-│   ├── scvi.yml
-│   └── cpa.yml
-└── cache/
-    ├── scgpt_whole_human/    # pretrained weights
-    └── gears_norman2019/     # GEARS pretrained on Norman
-```
-
-## Error handling
-
-- If pip install fails due to CUDA mismatch: suggest `conda install pytorch -c pytorch -c nvidia` with the correct CUDA version.
-- If git clone fails: try the HTTPS URL directly and check if GitHub is accessible.
-- If weight download fails: provide the manual download URL and save path.
-- Always record failures in a `workspace/models/<model>/install.log` file.
-
-## After installation
-
-Confirm the installation by running a minimal smoke test:
-- For GEARS: `from gears import GEARS`
-- For scGPT: `import scgpt`
-- For Pertpy: `import pertpy`
-
-Then update `workspace/models/<model>/STATUS.md` with: install date, environment name, and verification status.
+1. Clone repo to `workspace/models/<name>_workspace/`
+2. Detect environment from `environment.yml` / `requirements.txt` / `pyproject.toml`
+3. Create conda env: `conda create -n <env> python=3.10 -y`
+4. Install: `conda run -n <env> pip install -e .`
+5. Smoke test: `conda run -n <env> python -c "import <pkg>; print('OK')"`
+6. Add entry to `workspace/registry.json`
+7. Write `run_task.py` for the new backend (see existing ones as templates)
