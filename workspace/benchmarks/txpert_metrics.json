@@ -1,0 +1,369 @@
+{
+  "status": "success",
+  "backend_model": "TxPert",
+  "environment": "txpert_env",
+  "run_mode": "safe_smoke_run",
+  "dataset_path": "/home/duanyu/Python/Myproject/single_cell_agent/data/raw/norman/perturb_processed.h5ad",
+  "user_request": "Using the dataset archive at /home/duanyu/Python/Myproject/single_cell_agent/data/raw/norman.zip, use the TxPert model to run a safe smoke perturbation prediction test and report metrics.",
+  "metrics": {
+    "pearson_delta": 0.4464912712574005,
+    "fast_retrieval": 0.5625,
+    "pearson": 0.9999999481018144,
+    "spearman": 1.0,
+    "mse": 0.005148016312837949,
+    "r_squared": 0.9680737428367138
+  },
+  "artifacts": {
+    "workspace": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace",
+    "cache_dir": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/cache/custom_perturb_processed_smoke",
+    "per_perturbation_metrics_csv": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/txpert_safe_smoke_run_per_pert_metrics.csv"
+  },
+  "txpert_task": {
+    "task_type": "custom_perturb_processed_smoke",
+    "original_cell_line": "a549",
+    "cell_line": "K562",
+    "train_cell_types": [
+      "K562"
+    ],
+    "val_cell_type": null,
+    "test_cell_type": "K562",
+    "cache_dir": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/cache/custom_perturb_processed_smoke",
+    "run_mode": "safe_smoke_run",
+    "n_cells": 768,
+    "n_genes": 5045,
+    "n_conditions": 16,
+    "train_conditions": [
+      "AHR+ctrl",
+      "BPGM+SAMD1",
+      "BCL2L11+TGFBR2",
+      "ARRDC3+ctrl",
+      "ARID1A+ctrl",
+      "C3orf72+FOXL2",
+      "BCL2L11+BAK1",
+      "BCORL1+ctrl",
+      "BAK1+ctrl",
+      "BCL2L11+ctrl"
+    ],
+    "val_conditions": [
+      "BPGM+ctrl",
+      "BPGM+ZBTB1"
+    ],
+    "test_conditions": [
+      "AHR+FEV",
+      "AHR+KLF1",
+      "ATL1+ctrl",
+      "C19orf26+ctrl"
+    ]
+  },
+  "per_perturbation_metrics": {
+    "AHR+FEV": {
+      "pearson_delta": 0.5924384593963623,
+      "fast_retrieval": 0.875
+    },
+    "AHR+KLF1": {
+      "pearson_delta": 0.3447311818599701,
+      "fast_retrieval": 0.375
+    },
+    "ATL1+ctrl": {
+      "pearson_delta": 0.5937091708183289,
+      "fast_retrieval": 0.8125
+    },
+    "C19orf26+ctrl": {
+      "pearson_delta": 0.2550862729549408,
+      "fast_retrieval": 0.1875
+    }
+  },
+  "split_summary": {
+    "train_conditions": [
+      "AHR+ctrl",
+      "BPGM+SAMD1",
+      "BCL2L11+TGFBR2",
+      "ARRDC3+ctrl",
+      "ARID1A+ctrl",
+      "C3orf72+FOXL2",
+      "BCL2L11+BAK1",
+      "BCORL1+ctrl",
+      "BAK1+ctrl",
+      "BCL2L11+ctrl"
+    ],
+    "val_conditions": [
+      "BPGM+ctrl",
+      "BPGM+ZBTB1"
+    ],
+    "test_conditions": [
+      "AHR+FEV",
+      "AHR+KLF1",
+      "ATL1+ctrl",
+      "C19orf26+ctrl"
+    ],
+    "test_cell_type": "K562",
+    "n_cells": 768,
+    "n_genes": 5045,
+    "n_conditions": 16
+  },
+  "training": {
+    "device": "cuda:0",
+    "profile": "baseline",
+    "batch_size": 16
+  },
+  "evaluation": {
+    "primary_metrics": {
+      "pearson_delta": 0.4464912712574005,
+      "fast_retrieval": 0.5625,
+      "pearson": 0.9999999481018144,
+      "spearman": 1.0,
+      "mse": 0.005148016312837949,
+      "r_squared": 0.9680737428367138
+    },
+    "native_metrics": {
+      "pearson_delta": 0.4464912712574005,
+      "fast_retrieval": 0.5625,
+      "pearson": 0.9999999481018144,
+      "spearman": 1.0,
+      "mse": 0.005148016312837949,
+      "r_squared": 0.9680737428367138
+    },
+    "shared_metrics": {},
+    "native_metric_details": {
+      "AHR+FEV": {
+        "pearson_delta": 0.5924384593963623,
+        "fast_retrieval": 0.875
+      },
+      "AHR+KLF1": {
+        "pearson_delta": 0.3447311818599701,
+        "fast_retrieval": 0.375
+      },
+      "ATL1+ctrl": {
+        "pearson_delta": 0.5937091708183289,
+        "fast_retrieval": 0.8125
+      },
+      "C19orf26+ctrl": {
+        "pearson_delta": 0.2550862729549408,
+        "fast_retrieval": 0.1875
+      }
+    },
+    "gge": {
+      "status": "success",
+      "raw_test_aggregates": {
+        "pearson_mean": 0.9999999481018144,
+        "pearson_std": 0.0,
+        "pearson_median": 0.9999999481018144,
+        "mse_mean": 0.005148016312837949,
+        "mse_std": 0.0038365008180184976,
+        "mse_median": 0.004845113323712165,
+        "r_squared_mean": 0.9680737428367138,
+        "r_squared_std": 0.024205868817589928,
+        "r_squared_median": 0.9694402199238539,
+        "spearman_mean": 1.0,
+        "spearman_std": 0.0,
+        "spearman_median": 1.0
+      },
+      "deg_test_aggregates": {
+        "pearson_mean": 0.9999999478459358,
+        "pearson_std": 0.0,
+        "pearson_median": 0.9999999478459358,
+        "mse_mean": 0.06760413695941955,
+        "mse_std": 0.07780098078314232,
+        "mse_median": 0.054907996071731455,
+        "r_squared_mean": 0.38842233419418337,
+        "r_squared_std": 0.3948887993432587,
+        "r_squared_median": 0.38657015562057495,
+        "spearman_mean": 1.0,
+        "spearman_std": 0.0,
+        "spearman_median": 1.0
+      },
+      "deg_gene_count": 25,
+      "summary": {
+        "status": "success",
+        "artifacts": {
+          "root_dir": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/gge",
+          "raw_dir": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/gge/raw",
+          "deg_dir": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/gge/deg",
+          "real_input_h5ad": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/gge/inputs/real_test.h5ad",
+          "generated_input_h5ad": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/gge/inputs/generated_test.h5ad"
+        },
+        "raw_summary": {
+          "n_splits": 1,
+          "n_genes": 5045,
+          "condition_columns": [
+            "condition"
+          ],
+          "splits": {
+            "test": {
+              "n_conditions": 5,
+              "aggregates": {
+                "pearson_mean": 0.9999999481018144,
+                "pearson_std": 0.0,
+                "pearson_median": 0.9999999481018144,
+                "mse_mean": 0.005148016312837949,
+                "mse_std": 0.0038365008180184976,
+                "mse_median": 0.004845113323712165,
+                "r_squared_mean": 0.9680737428367138,
+                "r_squared_std": 0.024205868817589928,
+                "r_squared_median": 0.9694402199238539,
+                "spearman_mean": 1.0,
+                "spearman_std": 0.0,
+                "spearman_median": 1.0
+              }
+            }
+          }
+        },
+        "raw_test_aggregates": {
+          "pearson_mean": 0.9999999481018144,
+          "pearson_std": 0.0,
+          "pearson_median": 0.9999999481018144,
+          "mse_mean": 0.005148016312837949,
+          "mse_std": 0.0038365008180184976,
+          "mse_median": 0.004845113323712165,
+          "r_squared_mean": 0.9680737428367138,
+          "r_squared_std": 0.024205868817589928,
+          "r_squared_median": 0.9694402199238539,
+          "spearman_mean": 1.0,
+          "spearman_std": 0.0,
+          "spearman_median": 1.0
+        },
+        "deg_status": "success",
+        "deg_reason": null,
+        "deg_gene_count": 25,
+        "deg_summary": {
+          "n_splits": 1,
+          "n_genes": 25,
+          "condition_columns": [
+            "condition"
+          ],
+          "splits": {
+            "test": {
+              "n_conditions": 5,
+              "aggregates": {
+                "pearson_mean": 0.9999999478459358,
+                "pearson_std": 0.0,
+                "pearson_median": 0.9999999478459358,
+                "mse_mean": 0.06760413695941955,
+                "mse_std": 0.07780098078314232,
+                "mse_median": 0.054907996071731455,
+                "r_squared_mean": 0.38842233419418337,
+                "r_squared_std": 0.3948887993432587,
+                "r_squared_median": 0.38657015562057495,
+                "spearman_mean": 1.0,
+                "spearman_std": 0.0,
+                "spearman_median": 1.0
+              }
+            }
+          }
+        },
+        "deg_test_aggregates": {
+          "pearson_mean": 0.9999999478459358,
+          "pearson_std": 0.0,
+          "pearson_median": 0.9999999478459358,
+          "mse_mean": 0.06760413695941955,
+          "mse_std": 0.07780098078314232,
+          "mse_median": 0.054907996071731455,
+          "r_squared_mean": 0.38842233419418337,
+          "r_squared_std": 0.3948887993432587,
+          "r_squared_median": 0.38657015562057495,
+          "spearman_mean": 1.0,
+          "spearman_std": 0.0,
+          "spearman_median": 1.0
+        }
+      }
+    }
+  },
+  "gge_evaluation": {
+    "status": "success",
+    "artifacts": {
+      "root_dir": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/gge",
+      "raw_dir": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/gge/raw",
+      "deg_dir": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/gge/deg",
+      "real_input_h5ad": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/gge/inputs/real_test.h5ad",
+      "generated_input_h5ad": "/home/duanyu/Python/Myproject/single_cell_agent/workspaces/txpert_workspace/results/gge/inputs/generated_test.h5ad"
+    },
+    "raw_summary": {
+      "n_splits": 1,
+      "n_genes": 5045,
+      "condition_columns": [
+        "condition"
+      ],
+      "splits": {
+        "test": {
+          "n_conditions": 5,
+          "aggregates": {
+            "pearson_mean": 0.9999999481018144,
+            "pearson_std": 0.0,
+            "pearson_median": 0.9999999481018144,
+            "mse_mean": 0.005148016312837949,
+            "mse_std": 0.0038365008180184976,
+            "mse_median": 0.004845113323712165,
+            "r_squared_mean": 0.9680737428367138,
+            "r_squared_std": 0.024205868817589928,
+            "r_squared_median": 0.9694402199238539,
+            "spearman_mean": 1.0,
+            "spearman_std": 0.0,
+            "spearman_median": 1.0
+          }
+        }
+      }
+    },
+    "raw_test_aggregates": {
+      "pearson_mean": 0.9999999481018144,
+      "pearson_std": 0.0,
+      "pearson_median": 0.9999999481018144,
+      "mse_mean": 0.005148016312837949,
+      "mse_std": 0.0038365008180184976,
+      "mse_median": 0.004845113323712165,
+      "r_squared_mean": 0.9680737428367138,
+      "r_squared_std": 0.024205868817589928,
+      "r_squared_median": 0.9694402199238539,
+      "spearman_mean": 1.0,
+      "spearman_std": 0.0,
+      "spearman_median": 1.0
+    },
+    "deg_status": "success",
+    "deg_reason": null,
+    "deg_gene_count": 25,
+    "deg_summary": {
+      "n_splits": 1,
+      "n_genes": 25,
+      "condition_columns": [
+        "condition"
+      ],
+      "splits": {
+        "test": {
+          "n_conditions": 5,
+          "aggregates": {
+            "pearson_mean": 0.9999999478459358,
+            "pearson_std": 0.0,
+            "pearson_median": 0.9999999478459358,
+            "mse_mean": 0.06760413695941955,
+            "mse_std": 0.07780098078314232,
+            "mse_median": 0.054907996071731455,
+            "r_squared_mean": 0.38842233419418337,
+            "r_squared_std": 0.3948887993432587,
+            "r_squared_median": 0.38657015562057495,
+            "spearman_mean": 1.0,
+            "spearman_std": 0.0,
+            "spearman_median": 1.0
+          }
+        }
+      }
+    },
+    "deg_test_aggregates": {
+      "pearson_mean": 0.9999999478459358,
+      "pearson_std": 0.0,
+      "pearson_median": 0.9999999478459358,
+      "mse_mean": 0.06760413695941955,
+      "mse_std": 0.07780098078314232,
+      "mse_median": 0.054907996071731455,
+      "r_squared_mean": 0.38842233419418337,
+      "r_squared_std": 0.3948887993432587,
+      "r_squared_median": 0.38657015562057495,
+      "spearman_mean": 1.0,
+      "spearman_std": 0.0,
+      "spearman_median": 1.0
+    }
+  },
+  "notes": [
+    "Current TxPert integration onboards the user dataset into TxPert's cache format and runs the native MeanBaseline evaluation path.",
+    "This path uses TxPert's own datamodule, split structure, and metric implementation, then adds standardized GGE evaluation.",
+    "Official pretrained checkpoint inference for built-in TxPert benchmark tasks can be added later as a separate mode."
+  ]
+}
