@@ -1,0 +1,27 @@
+name: waddington-gears
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - torch>=2.0.0
+    - torch-geometric
+    - torch-scatter
+    - torch-sparse
+    - numpy
+    - scipy
+    - pandas
+    - scikit-learn
+    - matplotlib
+    - seaborn
+    - scanpy
+    - anndata
+    - networkx
+    - gears
+# Install GEARS from source after creating env:
+#   git clone https://github.com/snap-stanford/GEARS workspace/models/gears
+#   conda run -n waddington-gears pip install -e workspace/models/gears

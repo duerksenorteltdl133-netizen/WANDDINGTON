@@ -1,0 +1,26 @@
+name: waddington-scvi
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - scvi-tools>=1.0.0
+    - pertpy>=0.7.0
+    - scanpy>=1.9.0
+    - anndata>=0.10.0
+    - numpy
+    - scipy
+    - pandas
+    - scikit-learn
+    - matplotlib
+    - seaborn
+    - leidenalg
+    - igraph
+    - decoupler
+    - celltypist
+# This environment is shared between scVI and Pertpy workflows.
+# It is also used by the data-analyst subagent for AnnData inspection.

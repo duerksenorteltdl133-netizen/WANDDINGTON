@@ -1,0 +1,23 @@
+name: waddington-cpa
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - torch>=2.0.0
+    - scvi-tools>=1.0.0
+    - scanpy>=1.9.0
+    - anndata>=0.10.0
+    - numpy
+    - scipy
+    - pandas
+    - scikit-learn
+    - matplotlib
+    - seaborn
+# Install CPA from source after creating env:
+#   git clone https://github.com/facebookresearch/CPA workspace/models/cpa
+#   conda run -n waddington-cpa pip install -e workspace/models/cpa

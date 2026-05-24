@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.so
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Data files (large — track only metadata)
+workspace/data/*.h5ad
+workspace/data/*.loom
+workspace/data/*.h5
+workspace/cache/
+workspace/models/*/checkpoints/
+workspace/models/*/*.bin
+workspace/models/*/*.pt
+workspace/models/*/*.safetensors
+
+# Experiment results (keep scripts, not raw outputs)
+experiments/results/
+experiments/.plans/*.lock
+
+# Node / Pi runtime
+node_modules/
+.feynman/agent/
+dist/
+
+# Build artifacts
+*.d.mts
+*.mjs
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.local
+
+# Large model weights
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Logs
+*.log

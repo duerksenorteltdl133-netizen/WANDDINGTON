@@ -1,0 +1,27 @@
+name: waddington-scgpt
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - torch>=2.0.0
+    - scgpt
+    - flash-attn
+    - numpy
+    - scipy
+    - pandas
+    - scikit-learn
+    - matplotlib
+    - seaborn
+    - scanpy
+    - anndata
+    - transformers
+    - datasets
+# Pretrained weights:
+#   mkdir -p workspace/models/scgpt/checkpoints
+#   Download from: https://github.com/bowang-lab/scGPT/releases
+#   Recommended: whole_human checkpoint for general perturbation tasks

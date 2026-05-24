@@ -1,0 +1,29 @@
+{
+  "name": "waddington",
+  "version": "0.1.0",
+  "description": "Single-cell gene perturbation AI agent for biologists",
+  "author": "Waddington Contributors",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "single-cell",
+    "gene-perturbation",
+    "scRNA-seq",
+    "bioinformatics",
+    "ai-agent",
+    "GEARS",
+    "scGPT",
+    "scVI"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
