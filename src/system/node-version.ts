@@ -33,7 +33,7 @@ export function getUnsupportedNodeVersionLines(version = process.versions.node):
 	const parsed = parseNodeVersion(version);
 	const rangeText = `Node.js ${MIN_NODE_VERSION} through ${MAX_NODE_MAJOR}.x`;
 	return [
-		`feynman supports ${rangeText} (detected ${version}).`,
+		`waddington supports ${rangeText} (detected ${version}).`,
 		parsed.major > MAX_NODE_MAJOR
 			? "This newer Node release is not supported yet because native Pi packages may fail to build."
 			: isWindows

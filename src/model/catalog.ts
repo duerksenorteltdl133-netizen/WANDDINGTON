@@ -294,12 +294,12 @@ export function buildModelStatusSnapshotFromRecords(
 	if (available.length === 0) {
 		guidance.push("No authenticated Pi models are available yet.");
 		guidance.push(
-			"Run `feynman model login <provider>` (OAuth) or configure an API key (env var, auth.json, or models.json for custom providers).",
+			"Run `waddington model login <provider>` (OAuth) or configure an API key (env var, auth.json, or models.json for custom providers).",
 		);
-		guidance.push("After auth is in place, rerun `feynman model list` or `feynman setup model`.");
+		guidance.push("After auth is in place, rerun `waddington model list` or `waddington setup model`.");
 	} else if (!current) {
 		guidance.push(`No default research model is set. Recommended: ${recommended?.spec}.`);
-		guidance.push("Run `feynman model set <provider/model>` or `feynman setup model`.");
+		guidance.push("Run `waddington model set <provider/model>` or `waddington setup model`.");
 	} else if (!currentValid) {
 		guidance.push(`Configured default model is unavailable: ${current}.`);
 		if (recommended) {

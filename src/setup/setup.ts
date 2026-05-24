@@ -32,11 +32,11 @@ type SetupOptions = {
 
 function printNonInteractiveSetupGuidance(): void {
 	printInfo("Non-interactive terminal. Use explicit commands:");
-	printInfo("  feynman model login <provider>");
-	printInfo("  feynman model set <provider/model>");
-	printInfo("  # or configure API keys via env vars/auth.json and rerun `feynman model list`");
-	printInfo("  feynman alpha login");
-	printInfo("  feynman doctor");
+	printInfo("  waddington model login <provider>");
+	printInfo("  waddington model set <provider/model>");
+	printInfo("  # or configure API keys via env vars/auth.json and rerun `waddington model list`");
+	printInfo("  waddington alpha login");
+	printInfo("  waddington doctor");
 }
 
 function summarizePackageSources(sources: string[]): string {
@@ -64,9 +64,9 @@ async function maybeInstallBundledPackages(options: SetupOptions): Promise<void>
 	}
 
 	printInfo(`Missing packages: ${summarizePackageSources(missing.map((entry) => entry.source))}`);
-	const shouldInstall = await promptConfirm("Install missing Feynman packages now?", true);
+	const shouldInstall = await promptConfirm("Install missing Waddington packages now?", true);
 	if (!shouldInstall) {
-		printInfo("Skipping package install. Feynman may install missing packages later if needed.");
+		printInfo("Skipping package install. Waddington may install missing packages later if needed.");
 		return;
 	}
 
@@ -179,7 +179,7 @@ export async function runSetup(options: SetupOptions): Promise<void> {
 	}
 
 	try {
-		await promptIntro("Feynman setup");
+		await promptIntro("Waddington setup");
 		await runModelSetup(options.settingsPath, options.authPath);
 		await maybeInstallBundledPackages(options);
 		await maybeInstallOptionalPackages(options);
@@ -207,7 +207,7 @@ export async function runSetup(options: SetupOptions): Promise<void> {
 			printInfo(`Recommended model: ${modelStatus.recommended}`);
 		}
 
-		await promptOutro("Feynman is ready");
+		await promptOutro("Waddington is ready");
 	} catch (error) {
 		if (error instanceof SetupCancelledError) {
 			printInfo("Setup cancelled.");

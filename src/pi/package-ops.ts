@@ -137,7 +137,7 @@ function ensureProjectInstallRoot(workingDir: string): string {
 
 	const packageJsonPath = join(installRoot, "package.json");
 	if (!existsSync(packageJsonPath)) {
-		writeFileSync(packageJsonPath, JSON.stringify({ name: "feynman-packages", private: true }, null, 2) + "\n", "utf8");
+		writeFileSync(packageJsonPath, JSON.stringify({ name: "waddington-packages", private: true }, null, 2) + "\n", "utf8");
 	}
 
 	return installRoot;
