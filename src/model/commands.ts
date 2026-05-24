@@ -914,6 +914,11 @@ export async function loginModelProvider(authPath: string, providerId?: string, 
 				printInfo(info.instructions);
 			}
 		},
+		onDeviceCode: (info: { userCode: string; verificationUri: string }) => {
+			printSection(`Device Login: ${provider.name ?? provider.id}`);
+			printInfo(`Visit: ${info.verificationUri}`);
+			printInfo(`Code:  ${info.userCode}`);
+		},
 		onPrompt: async (prompt: { message: string; placeholder?: string }) => {
 			return promptText(prompt.message, prompt.placeholder ?? "");
 		},
