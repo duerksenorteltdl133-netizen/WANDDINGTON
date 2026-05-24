@@ -38,9 +38,9 @@ export function applyFeynmanPackageManagerEnv(feynmanAgentDir: string): string {
 
 export function resolvePiPaths(appRoot: string) {
 	return {
-		piPackageRoot: resolve(appRoot, "node_modules", "@mariozechner", "pi-coding-agent"),
-		piCliPath: resolve(appRoot, "node_modules", "@mariozechner", "pi-coding-agent", "dist", "cli.js"),
-		piMainPath: resolve(appRoot, "node_modules", "@mariozechner", "pi-coding-agent", "dist", "main.js"),
+		piPackageRoot: resolve(appRoot, "node_modules", "@earendil-works", "pi-coding-agent"),
+		piCliPath: resolve(appRoot, "node_modules", "@earendil-works", "pi-coding-agent", "dist", "cli.js"),
+		piMainPath: resolve(appRoot, "node_modules", "@earendil-works", "pi-coding-agent", "dist", "main.js"),
 		piCliWrapperPath: resolve(appRoot, "dist", "pi", "pi-cli-wrapper.js"),
 		piCliWrapperSourcePath: resolve(appRoot, "src", "pi", "pi-cli-wrapper.ts"),
 		promisePolyfillPath: resolve(appRoot, "dist", "system", "promise-polyfill.js"),
@@ -49,7 +49,7 @@ export function resolvePiPaths(appRoot: string) {
 		researchToolsPath: resolve(appRoot, "extensions", "research-tools.ts"),
 		promptTemplatePath: resolve(appRoot, "prompts"),
 		systemPromptPath: resolve(appRoot, ".waddington", "SYSTEM.md"),
-		piWorkspaceNodeModulesPath: resolve(appRoot, ".waddington", "npm", "node_modules"),
+		piWorkspaceNodeModulesPath: resolve(appRoot, "node_modules"),
 		nodeModulesBinPath: resolve(appRoot, "node_modules", ".bin"),
 	};
 }

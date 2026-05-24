@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 
-import { SettingsManager } from "@mariozechner/pi-coding-agent";
+import { SettingsManager } from "@earendil-works/pi-coding-agent";
 
 import { syncBundledAssets } from "./bootstrap/sync.js";
 import {

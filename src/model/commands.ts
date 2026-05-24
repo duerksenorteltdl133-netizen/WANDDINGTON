@@ -1,4 +1,4 @@
-import { AuthStorage } from "@mariozechner/pi-coding-agent";
+import { AuthStorage } from "@earendil-works/pi-coding-agent";
 import { readFileSync, writeFileSync } from "node:fs";
 import { exec as execCallback } from "node:child_process";
 import { promisify } from "node:util";
@@ -916,6 +916,15 @@ export async function loginModelProvider(authPath: string, providerId?: string, 
 		},
 		onPrompt: async (prompt: { message: string; placeholder?: string }) => {
 			return promptText(prompt.message, prompt.placeholder ?? "");
+		},
+		onSelect: async (prompt: { message: string; options: { id: string; label: string }[] }) => {
+			printInfo(prompt.message);
+			for (const [i, opt] of prompt.options.entries()) {
+				printInfo(`  ${i + 1}. ${opt.label}`);
+			}
+			const answer = await promptText("Enter number");
+			const index = parseInt(answer, 10) - 1;
+			return prompt.options[index]?.id;
 		},
 		onProgress: (message: string) => {
 			printInfo(message);

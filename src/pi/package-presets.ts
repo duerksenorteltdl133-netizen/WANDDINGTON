@@ -1,4 +1,4 @@
-import type { PackageSource } from "@mariozechner/pi-coding-agent";
+import type { PackageSource } from "@earendil-works/pi-coding-agent";
 
 export const CORE_PACKAGE_SOURCES = [
 	"npm:@companion-ai/alpha-hub",

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { getEnvApiKey } from "@mariozechner/pi-ai";
+import { getEnvApiKey } from "@earendil-works/pi-ai";
 
 import { createModelRegistry } from "./registry.js";
 

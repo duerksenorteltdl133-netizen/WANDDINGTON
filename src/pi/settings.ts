@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
-import { ModelRegistry, type PackageSource } from "@mariozechner/pi-coding-agent";
+import { ModelRegistry, type PackageSource } from "@earendil-works/pi-coding-agent";
 
 import { CORE_PACKAGE_SOURCES, filterPackageSourcesForCurrentNode, shouldPruneLegacyDefaultPackages } from "./package-presets.js";
 import { createModelRegistry } from "../model/registry.js";
