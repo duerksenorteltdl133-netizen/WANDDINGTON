@@ -182,7 +182,6 @@ export function syncBundledAssets(appRoot: string, agentDir: string): BootstrapS
 	syncManagedFiles(resolve(appRoot, ".waddington", "themes"), resolve(agentDir, "themes"), "themes", state, result);
 	syncManagedFiles(resolve(appRoot, ".waddington", "agents"), resolve(agentDir, "agents"), "agents", state, result);
 	syncManagedFiles(resolve(appRoot, "skills"), resolve(agentDir, "skills"), "skills", state, result);
-	syncManagedFiles(resolve(appRoot, "prompts"), resolve(agentDir, "prompts"), "prompts", state, result);
 
 	writeBootstrapState(statePath, state);
 	return result;
