@@ -31,6 +31,88 @@ When searching for single-cell and perturbation biology topics:
 
 For bioRxiv papers: search with `web_search` using `site:biorxiv.org <topic>` or `site:ncbi.nlm.nih.gov <topic>` queries. Also use the `alpha` CLI for arXiv preprints.
 
+## API toolbox
+
+Use these directly — no API keys required for basic access.
+
+### PubMed / NCBI E-utilities
+
+Search published biomedical literature (36M+ citations):
+
+```bash
+# Step 1: search → get PMIDs
+PMIDS=$(curl -s "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=single+cell+CRISPR+perturbation+K562&retmax=10&retmode=json" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(','.join(d['esearchresult']['idlist']))")
+echo "Found PMIDs: $PMIDS"
+
+# Step 2: fetch abstracts
+curl -s "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=${PMIDS}&retmode=xml&rettype=abstract"
+```
+
+Query syntax:
+- Boolean: `AND`, `OR`, `NOT`, parentheses for grouping
+- Field tags: `[tiab]` title+abstract, `[au]` author, `[mesh]` MeSH term, `[dp]` date (e.g. `2022:2025[dp]`), `[pt]` publication type
+- Example: `"single cell"[tiab] AND "CRISPR"[tiab] AND "perturbation"[tiab] AND 2020:2025[dp]`
+- URL-encode spaces as `+`, quotes as `%22`
+- Rate limit: 3 req/sec without key; set `NCBI_API_KEY` env var for 10 req/sec
+
+### GEO dataset discovery
+
+Find perturbation datasets by organism, cell type, or experimental condition:
+
+```bash
+# Search GEO datasets (returns GDS/GSE IDs)
+curl -s "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term=single+cell+CRISPR+screen+human&retmax=10&retmode=json" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['esearchresult']['count'], 'datasets found'); print(d['esearchresult']['idlist'])"
+
+# Fetch summary for specific IDs
+curl -s "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&id=200133344&retmode=json" \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); r=list(d['result'].values())[1]; print(r.get('title'), r.get('gse'), r.get('n_samples'), 'samples')"
+```
+
+Direct accession browse: `https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE133344`
+
+Useful GEO search terms for perturbation biology:
+- `"Perturb-seq"[ti] AND "single cell"[ti]`
+- `"CRISPR screen"[ti] AND "RNA-seq"[ti] AND "Homo sapiens"[orgn]`
+- `"overexpression"[ti] AND "single cell"[ti] AND "K562"[ti]`
+
+### Semantic Scholar (citation graph)
+
+Find papers citing a work or being cited by it — useful for finding follow-up or foundational papers:
+
+```bash
+# Search papers by keyword
+curl -s "https://api.semanticscholar.org/graph/v1/paper/search?query=GEARS+gene+perturbation+prediction&fields=title,authors,year,externalIds,citationCount&limit=5" \
+  | python3 -c "import sys,json; [print(p['citationCount'], p['year'], p['title']) for p in json.load(sys.stdin)['data']]"
+
+# Find papers that CITE a paper (follow-up work)
+PAPER_ID="DOI:10.1038/s41587-023-01905-6"   # GEARS paper
+curl -s "https://api.semanticscholar.org/graph/v1/paper/${PAPER_ID}/citations?fields=title,authors,year,citationCount&limit=20" \
+  | python3 -c "import sys,json; [print(c['citingPaper']['year'], c['citingPaper']['title']) for c in json.load(sys.stdin)['data']]"
+
+# Find papers CITED BY a paper (methods it builds on)
+curl -s "https://api.semanticscholar.org/graph/v1/paper/${PAPER_ID}/references?fields=title,authors,year&limit=20" \
+  | python3 -c "import sys,json; [print(r['citedPaper']['year'], r['citedPaper']['title']) for r in json.load(sys.stdin)['data']]"
+
+# Look up a paper directly by DOI
+curl -s "https://api.semanticscholar.org/graph/v1/paper/DOI:10.1038/s41592-024-02201-0?fields=title,year,citationCount,externalIds"
+```
+
+Rate limit: 100 req/min unauthenticated; set `S2_API_KEY` env var for higher limits.
+
+### Tool routing decision
+
+| Information needed | Use |
+|---|---|
+| Published paper abstract / PMID | PubMed E-utilities `esearch` + `efetch` |
+| Perturbation dataset by accession or keyword | GEO E-utilities `db=gds` |
+| Who cites this paper / what it builds on | Semantic Scholar citation graph |
+| bioRxiv preprint full text | `alpha` CLI or `web_search site:biorxiv.org` |
+| arXiv preprint | `alpha` CLI |
+| Software release, GitHub repo, latest version | `web_search` + `fetch_content` |
+| GEO dataset file download | `fetch_content` on `https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=<accession>` |
+
 ## Search strategy
 
 1. **Start wide.** Begin with broad queries to map the landscape. Use 2–4 varied-angle queries simultaneously — never one at a time.

@@ -1,6 +1,7 @@
 {
   "version": 1,
-  "workspace_root": "/home/duanyu/Python/SKILL/waddington/workspace/models",
+  "_note": "All paths are relative to the repository root (the directory containing workspace/).",
+  "workspace_root": "workspace/models",
   "backends": [
     {
       "model_id": "gears",
@@ -17,9 +18,10 @@
         "replogle2022"
       ],
       "metrics_file": "results/gears_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/GEARS_workspace",
+      "workspace_dir": "workspace/models/gears",
       "has_run_task": true,
-      "has_results": true
+      "has_results": true,
+      "readme": "workspace/models/gears/README.md"
     },
     {
       "model_id": "scgpt",
@@ -36,9 +38,10 @@
         "norman2019"
       ],
       "metrics_file": "results/scgpt_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/scGPT_workspace",
+      "workspace_dir": "workspace/models/scgpt",
       "has_run_task": true,
-      "has_results": true
+      "has_results": true,
+      "readme": "workspace/models/scgpt/README.md"
     },
     {
       "model_id": "cpa",
@@ -54,9 +57,10 @@
         "norman2019"
       ],
       "metrics_file": "results/cpa_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/cpa_workspace",
-      "has_run_task": true,
-      "has_results": true
+      "workspace_dir": "workspace/models/cpa_workspace",
+      "has_run_task": false,
+      "has_results": true,
+      "readme": "workspace/models/cpa_workspace/README.md"
     },
     {
       "model_id": "txpert",
@@ -71,9 +75,10 @@
         "norman2019"
       ],
       "metrics_file": "results/txpert_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/txpert_workspace",
+      "workspace_dir": "workspace/models/txpert",
       "has_run_task": true,
-      "has_results": true
+      "has_results": true,
+      "readme": "workspace/models/txpert/README.md"
     },
     {
       "model_id": "scouter",
@@ -87,9 +92,10 @@
         "norman2019"
       ],
       "metrics_file": "results/scouter_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/scouter_workspace",
+      "workspace_dir": "workspace/models/scouter",
       "has_run_task": true,
-      "has_results": true
+      "has_results": true,
+      "readme": "workspace/models/scouter/README.md"
     },
     {
       "model_id": "state",
@@ -103,9 +109,10 @@
         "norman2019"
       ],
       "metrics_file": "results/state_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/state_workspace",
+      "workspace_dir": "workspace/models/state",
       "has_run_task": true,
-      "has_results": true
+      "has_results": true,
+      "readme": "workspace/models/state/README.md"
     },
     {
       "model_id": "systema",
@@ -120,9 +127,10 @@
         "norman2019"
       ],
       "metrics_file": "results/systema_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/systema_workspace",
+      "workspace_dir": "workspace/models/systema",
       "has_run_task": false,
-      "has_results": false
+      "has_results": false,
+      "readme": "workspace/models/systema/README.md"
     },
     {
       "model_id": "systema_matching_mean",
@@ -137,9 +145,10 @@
         "norman2019"
       ],
       "metrics_file": "results/systema_matching_mean_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/systema_matching_mean_workspace",
-      "has_run_task": true,
-      "has_results": true
+      "workspace_dir": "workspace/models/systema",
+      "has_run_task": false,
+      "has_results": true,
+      "readme": "workspace/models/systema/README.md"
     },
     {
       "model_id": "systema_nonctl_mean",
@@ -154,9 +163,10 @@
         "norman2019"
       ],
       "metrics_file": "results/systema_nonctl_mean_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/systema_nonctl_mean_workspace",
-      "has_run_task": true,
-      "has_results": true
+      "workspace_dir": "workspace/models/systema",
+      "has_run_task": false,
+      "has_results": true,
+      "readme": "workspace/models/systema/README.md"
     },
     {
       "model_id": "scpram",
@@ -170,9 +180,10 @@
         "norman2019"
       ],
       "metrics_file": "results/scpram_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/scpram_workspace",
-      "has_run_task": true,
-      "has_results": false
+      "workspace_dir": "workspace/models/scpram_workspace",
+      "has_run_task": false,
+      "has_results": false,
+      "readme": "workspace/models/scpram_workspace/README.md"
     },
     {
       "model_id": "perturbgraph",
@@ -187,9 +198,10 @@
         "norman2019"
       ],
       "metrics_file": "results/perturbgraph_metrics.json",
-      "workspace_dir": "/home/duanyu/Python/SKILL/waddington/workspace/models/perturbgraph_workspace",
-      "has_run_task": true,
-      "has_results": true
+      "workspace_dir": "workspace/models/perturbgraph_workspace",
+      "has_run_task": false,
+      "has_results": true,
+      "readme": "workspace/models/perturbgraph_workspace/README.md"
     }
   ]
 }

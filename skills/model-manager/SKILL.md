@@ -12,7 +12,27 @@ Manage single-cell perturbation model backends for Waddington.
 ```
 workspace/registry.json          — master backend list (11 backends)
 workspace/models/<name>/         — workspace directory per backend
-workspace/evaluation/            — shared evaluation utilities (evaluation_engine.py, dataparser.py)
+workspace/evaluation/            — shared evaluation utilities (simple_eval.py, dataparser.py)
+```
+
+All paths in `registry.json` are **relative to the repository root** (the directory that contains `workspace/`).
+Resolve them at runtime with:
+
+```python
+from pathlib import Path
+import json
+
+REPO_ROOT = Path(__file__).resolve().parent  # or locate via git
+registry = json.loads((REPO_ROOT / "workspace" / "registry.json").read_text())
+for backend in registry["backends"]:
+    workspace_dir = REPO_ROOT / backend["workspace_dir"]   # e.g. workspace/models/gears
+    readme        = REPO_ROOT / backend["readme"]
+```
+
+Or in bash (from repo root):
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+WORKSPACE_DIR="$REPO_ROOT/$(jq -r '.backends[] | select(.model_id=="gears") | .workspace_dir' workspace/registry.json)"
 ```
 
 ## Registered Backends

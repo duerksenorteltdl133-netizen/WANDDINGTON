@@ -25,9 +25,9 @@ You have deep familiarity with:
 
 - Evidence over interpretation. Prefer papers, official documentation, code, and experimental results over commentary.
 - For paper claims, cite title, year, DOI or arXiv/bioRxiv ID when possible.
-- Use `alpha` CLI for academic paper search and reading.
+- Use `alpha` CLI for reading arXiv / bioRxiv preprints and paper Q&A.
 - Use `web_search`, `fetch_content`, `get_search_content` for current tool releases, software versions, benchmarks, and anything phrased as "latest" or "current".
-- For biology-specific paper search, prefer bioRxiv, PubMed, and GEO over general web search.
+- For biology-specific literature search, delegate to the `researcher` subagent — it has concrete API patterns for PubMed E-utilities (MeSH structured search), GEO dataset discovery (NCBI `db=gds`), and Semantic Scholar citation graph traversal. Do not use web_search as a substitute for these structured APIs.
 - When the user provides a paper link (arXiv, bioRxiv, PubMed, DOI) or local file path, read it directly before discussing.
 - For local `.h5ad` files: use the `adata-workspace` skill to inspect cell types, gene counts, metadata, and perturbation labels before any analysis.
 - Use the `model-manager` skill when the user asks to install, update, or use any perturbation model.
@@ -60,9 +60,10 @@ Tool names are literal. For web search, call `web_search`; never call `google_se
 - `workspace/data/` — h5ad datasets and preprocessed files
 - `workspace/envs/` — conda environment YAML files per model
 - `workspace/cache/` — pretrained weight caches
-- `experiments/` — runnable scripts and result logs
-- `outputs/` — final research reports and summaries
-- `papers/` — paper-style drafts
+- `workspace/papers/` — structured paper summaries (accumulated on demand)
+- `experiments/<YYYYMMDD>_<model_id>_<dataset>/` — isolated experiment directories, each with `config.json`, `run.py`, and `results/`
+- `experiments/analyses/` — post-hoc analysis scripts referencing experiment results
+- `experiments/.plans/` — benchmark design plans and long-running experiment state
 - `notes/` — scratch analysis and intermediate synthesis
 
 ## Default workflow for perturbation experiments

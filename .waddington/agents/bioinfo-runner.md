@@ -112,100 +112,158 @@ Read the most relevant example script and include its key API patterns in the ru
 
 ## Environment setup rules
 
-- Each model gets its own conda environment to avoid dependency conflicts:
-  - GEARS: `waddington-gears`
-  - scGPT: `waddington-scgpt`
-  - scVI/Pertpy: `waddington-scvi`
-  - CPA: `waddington-cpa`
-- Always check if the environment already exists before creating it: `conda env list | grep waddington-<model>`
-- Write the environment YAML to `workspace/envs/<model>.yml` before creating it.
-- After installation, verify imports work: `conda run -n waddington-<model> python -c "import <package>; print('OK')"`
-- If installation fails, record the error in the run log and try an alternative (different version, pip fallback).
+**For predefined models** (those in `workspace/registry.json`):
+- Read the `conda_env` field from the registry — that is the authoritative env name.
+- Existing envs on this machine: `gears_env`, `scgpt_env`, `cpa_env`, `txpert_env`,
+  `scouter_env`, `state_env`, `systema_env`, `scpram_env`, `sc_env`.
+- Always check first: `conda env list | grep <conda_env>`
+- Do NOT rename or recreate these envs — they are shared with the original project.
+
+**For new models** (arbitrary GitHub repos not in registry.json):
+- Create a new env named `waddington-<slug>` (e.g. `waddington-pertnet`).
+- Write the environment YAML to `workspace/envs/<slug>.yml` before creating.
+- After installation verify: `conda run -n waddington-<slug> python -c "import <pkg>; print('OK')"`
+- If installation fails, record the error and try an alternative (different version, pip fallback).
+
+## Experiment directory structure
+
+Every experiment gets its own isolated directory. **Always use this layout** — do not
+write scripts flat to `experiments/`:
+
+```
+experiments/<YYYYMMDD>_<model_id>_<dataset>/
+├── config.json      ← experiment parameters (written before running)
+├── run.py           ← self-contained experiment script
+└── results/
+    ├── metrics.json ← standard evaluation output (from simple_eval.py)
+    └── run.log      ← captured stdout/stderr
+```
+
+Create the directory:
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+EXP_DIR=$REPO_ROOT/experiments/$(date +%Y%m%d)_<model_id>_<dataset>
+mkdir -p $EXP_DIR/results
+```
+
+Write `config.json` before generating `run.py`:
+```json
+{
+  "model_id": "<model_id>",
+  "conda_env": "<conda_env from registry>",
+  "dataset_path": "<path to .h5ad>",
+  "dataset": "<dataset_name>",
+  "mode": "safe_smoke_run",
+  "seed": 42,
+  "created": "<ISO timestamp>"
+}
+```
 
 ## Script generation rules
 
-- Write all experiment scripts to `experiments/<slug>_<model>.py`.
-- Every script must have a header comment block specifying: model, dataset, perturbations, hyperparameters, random seed, output path.
+- Write `run.py` inside the experiment directory (`$EXP_DIR/run.py`), not at repo root.
+- Resolve repo root dynamically — no hardcoded absolute paths:
+  ```python
+  from pathlib import Path
+  import json, sys
+  CONFIG    = json.loads(Path("config.json").read_text())
+  REPO_ROOT = Path(__file__).resolve().parents[2]   # experiments/<slug>/run.py → repo root
+  sys.path.insert(0, str(REPO_ROOT / "workspace" / "evaluation"))
+  ```
 - Always fix the random seed: `torch.manual_seed(42)`, `np.random.seed(42)`, `random.seed(42)`.
-- Every script must save results to `experiments/results/<slug>/` in a structured format:
-  - `metrics.json` — key numeric results (Pearson r, DEG overlap, etc.)
-  - `predictions.h5ad` — predicted gene expression (if applicable)
-  - `run_config.json` — full hyperparameter and data config used
-  - `run.log` — captured stdout/stderr
-- Scripts must be self-contained: no relative imports, no hardcoded absolute paths except workspace root.
-- Use `pathlib.Path` for all file paths.
+- Use `simple_eval.py` for evaluation — **not** custom metric code:
+  ```python
+  from simple_eval import evaluate_perturbation, save_metrics
+  metrics = evaluate_perturbation(predicted_means, observed_means,
+                                  ctrl_mean=ctrl_mean,
+                                  model=CONFIG["model_id"],
+                                  dataset=CONFIG["dataset"],
+                                  mode=CONFIG["mode"])
+  save_metrics(metrics, "results/metrics.json")
+  ```
+- Output schema keys: `primary_metrics.pearson`, `primary_metrics.pearson_de`,
+  `primary_metrics.mse`, `primary_metrics.mae`, `primary_metrics.pearson_delta`.
 
-## Standard experiment template
+## Standard run.py template
 
 ```python
 #!/usr/bin/env python
 """
-Model: <model_name>
-Dataset: <dataset_name> (<GEO_accession>)
-Perturbations: <perturbation_list>
-Seed: 42
-Output: experiments/results/<slug>/
+Model:   <model_name>
+Dataset: <dataset_name>
+Seed:    42
+Output:  results/metrics.json
 """
-import json
-import random
+import json, random, sys
 from pathlib import Path
 
 import numpy as np
+
+CONFIG    = json.loads(Path("config.json").read_text())
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "workspace" / "evaluation"))
+
 import torch
+torch.manual_seed(CONFIG.get("seed", 42))
+np.random.seed(CONFIG.get("seed", 42))
+random.seed(CONFIG.get("seed", 42))
 
-SEED = 42
-random.seed(SEED)
-np.random.seed(SEED)
-torch.manual_seed(SEED)
+WORKSPACE = REPO_ROOT / "workspace"
 
-WORKSPACE = Path("workspace")
-OUTPUT_DIR = Path("experiments/results/<slug>")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+# --- model-specific imports and setup ---
 
-# ... experiment code ...
+# predicted_means: {pert_name: np.ndarray (n_genes,)}
+# observed_means:  {pert_name: np.ndarray (n_genes,)}
+# ctrl_mean:       np.ndarray (n_genes,) or None
 
-# Save metrics
-metrics = {
-    "pearson_r": ...,
-    "top20_deg_overlap": ...,
-    "model": "<model_name>",
-    "dataset": "<dataset_name>",
-    "seed": SEED,
-}
-(OUTPUT_DIR / "metrics.json").write_text(json.dumps(metrics, indent=2))
-print(json.dumps(metrics, indent=2))
+from simple_eval import evaluate_perturbation, save_metrics
+metrics = evaluate_perturbation(
+    predicted_means, observed_means,
+    ctrl_mean=ctrl_mean,
+    model=CONFIG["model_id"],
+    dataset=CONFIG["dataset"],
+    mode=CONFIG["mode"],
+)
+save_metrics(metrics, "results/metrics.json")
+print(json.dumps(metrics["primary_metrics"], indent=2))
 ```
 
-## Execution rules
+## Execution
 
-- Run long experiments as background processes using the process package.
-- Always write a plan artifact to `experiments/.plans/<slug>.md` before executing.
-- Check every 30 seconds for process completion when monitoring.
-- If a job fails, capture the last 50 lines of stderr and include them in the run log.
-- Never silently ignore a failed step — record the failure and report it.
+```bash
+cd $EXP_DIR
+REPO_ROOT=$(git rev-parse --show-toplevel)
+export PYTHONPATH=$REPO_ROOT/workspace/evaluation:$PYTHONPATH
+conda run -n <conda_env> python run.py 2>&1 | tee results/run.log
+```
 
 ## Result parsing
 
 After a run completes:
-1. Read `experiments/results/<slug>/metrics.json`
-2. Read the last 100 lines of `experiments/results/<slug>/run.log`
-3. Write a structured summary to the output file (default: `run-log.md`):
-   - Run configuration
-   - Key metrics (with comparison to published baselines if known)
-   - Any warnings or errors encountered
-   - Next recommended step
+1. Read `results/metrics.json` — focus on `primary_metrics`
+2. Read the last 50 lines of `results/run.log` for errors
+3. Compare `primary_metrics.pearson_de` against `workspace/benchmarks/<model>_metrics.json`
+4. Write summary to the output file (default: `run-log.md`):
+   - Experiment config (model, dataset, mode, seed)
+   - Key metrics vs. benchmark
+   - Warnings or errors
+   - Recommended next step
 
 ## Baseline comparison
 
-When reporting results, compare against known published baselines when available:
-- GEARS (Norman et al. 2019 benchmark): Pearson r ≈ 0.81 (top-20 DEGs)
-- Mean expression baseline: always compute this as the floor
-- scGPT perturbation: Pearson r ≈ 0.76 (from scGPT paper, zero-shot)
+Published baselines for Norman 2019 (full benchmark):
 
-State clearly if the baseline numbers are approximate or from a different evaluation protocol.
+| Model | pearson | pearson_de |
+|---|---|---|
+| GEARS | ~0.82 | ~0.71 |
+| scGPT | ~0.80 | ~0.68 |
+| Systema matching-mean | ~0.99 | — |
+| Mean baseline | ~0.68 | ~0.50 |
+
+Local smoke-run numbers are inflated — always note the mode when comparing.
 
 ## Output contract
 
 - Save the run log to the output path specified by the parent (default: `run-log.md`).
-- Always include: experiment config, run status (success/failure/partial), key metrics, and next step.
-- Do not dump full stdout logs into parent context — summarize and save raw logs to `experiments/results/<slug>/run.log`.
+- Always include: experiment directory path, config, run status, key metrics, next step.
+- Do not dump full stdout into parent context — summarize and point to `results/run.log`.

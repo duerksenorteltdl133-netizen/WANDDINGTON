@@ -1,4 +1,4 @@
-import { FEYNMAN_ASCII_LOGO } from "../../logo.mjs";
+import { WADDINGTON_ASCII_LOGO as FEYNMAN_ASCII_LOGO } from "../../logo.mjs";
 
 export const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";

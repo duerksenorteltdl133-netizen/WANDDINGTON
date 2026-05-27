@@ -63,6 +63,54 @@ When asked to compare, list similarities and differences in: model architecture,
 **Replication request:**
 When the user wants to replicate, run the `/replicate` workflow directly with the extracted GitHub URL, dataset accession, and methods summary — no need to re-read the paper.
 
+## Saving to the knowledge base
+
+After discussion, if the paper is about perturbation prediction and not already indexed,
+offer to save it:
+
+> "要把这篇论文加进知识库吗？我可以整理成 `workspace/papers/<slug>.md` 供以后检索。"
+
+If the user agrees, create `workspace/papers/<slug>.md` with this structure:
+
+```markdown
+---
+title: "<full title>"
+authors: <surname list>
+year: <year>
+venue: <journal/conference>
+doi: <DOI URL>
+code: <GitHub URL or "not available">
+model_id: <model_id from registry.json if applicable, else omit>
+conda_env: <env name if applicable, else omit>
+---
+
+## Method
+[Architecture, key components, training approach — 3–5 sentences]
+
+## Datasets
+[Table: dataset name, cell count, perturbation count, split strategy]
+
+## Benchmark results (paper-reported)
+[Table: metric, this model, baseline(s)]
+
+## Architecture notes
+[Inputs, outputs, strengths, weaknesses — bullet points]
+
+## Comparison to other models
+[How does this compare to GEARS, scGPT, CPA, etc.]
+
+## Reproducibility
+[Code availability, data availability, known issues]
+
+## Local workspace (if applicable)
+[workspace_dir, conda_env, benchmark file path]
+```
+
+Then add a row to `workspace/papers/README.md` index table.
+
+Before creating, check `workspace/papers/README.md` — if the paper is already indexed,
+skip creation and just point to the existing file.
+
 ## Integrity rules
 
 - Quote the paper directly when interpreting results. Do not paraphrase in ways that change the meaning.
