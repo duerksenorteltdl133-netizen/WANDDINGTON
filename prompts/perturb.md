@@ -24,11 +24,15 @@ Create a slug from the gene name(s) and model: `<gene>-<model>` (lowercase, hyph
 ## Step 3: Check prerequisites
 
 ```bash
-conda env list | grep waddington-<model>
+# Read conda_env from registry.json for the chosen model
+REPO_ROOT=$(git rev-parse --show-toplevel)
+python3 -c "import json; r=json.load(open('$REPO_ROOT/workspace/registry.json')); m=[b for b in r['backends'] if b['model_id']=='<model>']; print(m[0]['conda_env'] if m else 'not found')"
+
+conda env list
 ls workspace/data/
 ```
 
-If model not installed: run the model-manager skill to install it first.
+If the model is not in `registry.json` or its conda env is missing: run the model-manager skill to install it first.
 
 ## Step 4: Inspect data
 
@@ -45,7 +49,7 @@ Write experiment plan to `experiments/.plans/<slug>.md`, then spawn:
 ```json
 {
   "agent": "bioinfo-runner",
-  "task": "Read experiments/.plans/<slug>.md. Write and execute an experiment script to predict the transcriptomic effect of <gene(s)> using <model> on the dataset at <data_path>. Save: experiments/<slug>_<model>.py, experiments/results/<slug>/metrics.json, experiments/results/<slug>/predictions.h5ad. Fix seed=42. Return a one-line status.",
+  "task": "Read experiments/.plans/<slug>.md. Write and execute an experiment script to predict the transcriptomic effect of <gene(s)> using <model> on the dataset at <data_path>. Use the standard experiment directory layout: experiments/<YYYYMMDD>_<model_id>_<dataset>/ containing config.json, run.py, and results/metrics.json + results/run.log. Fix seed=42. Return a one-line status.",
   "output": "run-log.md",
   "clarify": false,
   "async": false
@@ -61,12 +65,12 @@ After run completes:
 
 ## Step 7: Deliver
 
-Write `outputs/<slug>.md`:
+Write a summary to `experiments/<exp_dir>/results/summary.md`:
 - Perturbation: gene(s), model, dataset
 - Key metrics (Pearson r vs. baseline)
 - Top predicted DEGs (table)
-- Embedded plots
+- Embedded plot paths
 - Caveats and next steps
 
-Verify `outputs/<slug>.md` exists on disk before responding.
-Final response: brief summary + link to the output file.
+Verify `experiments/<exp_dir>/results/metrics.json` exists on disk before responding.
+Final response: brief summary + path to the experiment directory.
