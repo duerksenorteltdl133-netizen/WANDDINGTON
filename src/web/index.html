@@ -74,9 +74,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
 /* conversation item */
 .ci{
-  display:flex;align-items:center;gap:7px;
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;
   padding:7px 8px;border-radius:var(--rsm);cursor:pointer;
   transition:background var(--tr);position:relative;min-width:0;
+}
+.ci-snip{
+  width:100%;padding-left:20px;font-size:11px;color:var(--txm);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-top:-2px;
 }
 .ci:hover{background:var(--sur2);}
 .ci.active{background:var(--sur);}
@@ -923,6 +928,8 @@ function switchConv(id, noSend){
   agentEl = null;
   isStreaming = false;
   toolEls = {};
+  // Exit search mode when switching conversations
+  if(_searchMode){ searchEl.value=''; _searchMode=false; }
   renderConvList(searchEl.value);
   renderMessages(conv);
   if(!noSend && conv.sessionFile && ws && ws.readyState===WebSocket.OPEN){
@@ -1248,8 +1255,68 @@ document.querySelectorAll('.sugg').forEach(function(btn){
   });
 });
 
-/* ── Search ── */
-searchEl.addEventListener('input',function(){ renderConvList(searchEl.value); });
+/* ── Semantic search ── */
+var _searchTimer = null;
+var _searchMode  = false;   // true while showing search results
+
+function renderSearchMode(results){
+  _searchMode = true;
+  convListEl.innerHTML = '';
+  if(!results.length){
+    var empty = document.createElement('div');
+    empty.style.cssText = 'padding:8px 12px;font-size:12px;color:var(--txm)';
+    empty.textContent = 'No results';
+    convListEl.appendChild(empty);
+    return;
+  }
+  results.forEach(function(r){
+    var item = document.createElement('div');
+    item.className = 'ci' + (r.conv_id===curId?' active':'');
+    item.setAttribute('data-id', r.conv_id);
+
+    var ico = document.createElement('span');
+    ico.className = 'ci-ico';
+    ico.innerHTML = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+
+    var nameSpan = document.createElement('span');
+    nameSpan.className = 'ci-name';
+    nameSpan.textContent = r.name || r.conv_id;
+
+    item.appendChild(ico);
+    item.appendChild(nameSpan);
+
+    if(r.snippet){
+      var snip = document.createElement('span');
+      snip.className = 'ci-snip';
+      snip.textContent = r.snippet;
+      item.appendChild(snip);
+    }
+
+    item.addEventListener('click', function(){ switchConv(r.conv_id); });
+    convListEl.appendChild(item);
+  });
+}
+
+function runSearch(q){
+  if(!q || q.length < 3){
+    _searchMode = false;
+    renderConvList(q);
+    return;
+  }
+  apiFetch('/search?q=' + encodeURIComponent(q)).then(function(results){
+    renderSearchMode(results);
+  }).catch(function(){
+    _searchMode = false;
+    renderConvList(q);
+  });
+}
+
+searchEl.addEventListener('input', function(){
+  var q = searchEl.value;
+  clearTimeout(_searchTimer);
+  if(!q){ _searchMode=false; renderConvList(''); return; }
+  _searchTimer = setTimeout(function(){ runSearch(q); }, 280);
+});
 
 /* ── Attachment ── */
 attBtn.addEventListener('click',function(e){

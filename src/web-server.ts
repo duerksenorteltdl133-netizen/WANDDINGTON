@@ -13,9 +13,11 @@ import { ensureSupportedNodeVersion } from "./system/node-version.js";
 import { resolveAllExecutables } from "./system/executables.js";
 import { openDb, dbListConvs, dbCreateConv, dbUpdateConv, dbDeleteConv, dbUpsertMsg,
          dbListExperiments, dbUpsertExperiment, dbDeleteExperiment,
-         dbUpsertSummary, dbListSummaries } from "./web/db.js";
+         dbUpsertSummary, dbListSummaries,
+         dbIndexFts, dbFtsSearch, dbUpsertEmbedding, dbLoadEmbeddings } from "./web/db.js";
 import { extractExperiment, buildContextPrefix } from "./web/extract.js";
 import { generateSummary, buildSummaryContext } from "./web/summarize.js";
+import { embed, dotSim, vecToBlob, blobToVec, rrf, EMBED_DIMS } from "./web/embed.js";
 
 function readFrontendTemplate(appRoot: string): string {
 	const distPath = resolve(appRoot, "dist", "web", "index.html");
@@ -149,6 +151,20 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 			dbUpdateConv(conv.id, { name: sr.title });
 		}
 
+		// Build FTS index body: title + summary + topics + message content
+		const ftsBody = [
+			sr.title ?? "",
+			sr.summary,
+			sr.topics.join(" "),
+			...conv.msgs.map(m => m.content),
+		].join(" ").replace(/\s+/g, " ").slice(0, 8000);
+		dbIndexFts(conv.id, ftsBody);
+
+		// Fire-and-forget: generate embedding (async, does not block response)
+		embed(ftsBody.slice(0, 512)).then(vec => {
+			dbUpsertEmbedding(conv.id, vecToBlob(vec), EMBED_DIMS);
+		}).catch(() => { /* embedding is optional — ignore failures */ });
+
 		res.writeHead(201);
 		res.end(JSON.stringify({ ok: true, experiment, summary: summaryRec, newTitle: isDefault ? sr.title : null }));
 		return;
@@ -159,6 +175,61 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 		const qs  = new URL(req.url ?? "", "http://x").searchParams;
 		const lim = parseInt(qs.get("limit") ?? "50", 10);
 		res.end(JSON.stringify(dbListSummaries({ limit: lim })));
+		return;
+	}
+
+	// GET /api/search?q=... — RRF(FTS5 + vector) search over conversations
+	if (path === "/api/search" && method === "GET") {
+		const q   = new URL(req.url ?? "", "http://x").searchParams.get("q") ?? "";
+		const lim = 10;
+		if (!q.trim()) { res.end("[]"); return; }
+
+		// Layer 1: BM25 full-text search
+		const ftsHits = dbFtsSearch(q, lim * 2);
+
+		// Layer 3: vector cosine search (if any embeddings stored)
+		const vecHits: Array<{ id: string; rank: number }> = [];
+		const stored = dbLoadEmbeddings();
+		if (stored.length > 0) {
+			// Run embed async but we need the result synchronously for the response.
+			// Best-effort: use a cached query embedding if possible; otherwise skip vec.
+			// We pre-compute inline — acceptable latency for < 200 stored convs.
+			const qEmbed = await embed(q).catch(() => null);
+			if (qEmbed) {
+				const sims = stored.map(row => ({
+					id: row.conv_id,
+					sim: dotSim(qEmbed, blobToVec(row.vector)),
+				}));
+				sims.sort((a, b) => b.sim - a.sim);
+				sims.slice(0, lim * 2).forEach((s, i) => vecHits.push({ id: s.id, rank: i + 1 }));
+			}
+		}
+
+		// RRF fusion
+		const fused = rrf([
+			ftsHits.map(h => ({ id: h.conv_id, rank: h.rank })),
+			vecHits,
+		]).slice(0, lim);
+
+		// Enrich with conversation metadata + summary snippet
+		const summaries = dbListSummaries({ limit: 200 });
+		const sumMap = new Map(summaries.map(s => [s.conv_id, s]));
+		const convs  = dbListConvs();
+		const convMap = new Map(convs.map(c => [c.id, c]));
+
+		const results = fused.map(({ id, score }) => {
+			const conv = convMap.get(id);
+			const sum  = sumMap.get(id);
+			return {
+				conv_id: id,
+				name:    conv?.name ?? id,
+				snippet: sum?.summary?.slice(0, 120) ?? "",
+				title:   sum?.title ?? null,
+				score,
+			};
+		}).filter(r => convMap.has(r.conv_id));
+
+		res.end(JSON.stringify(results));
 		return;
 	}
 

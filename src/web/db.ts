@@ -99,6 +99,18 @@ export function openDb(dbPath: string): void {
 			topics_json TEXT   NOT NULL DEFAULT '[]',
 			updated_at INTEGER NOT NULL
 		);
+		CREATE VIRTUAL TABLE IF NOT EXISTS fts_conv USING fts5(
+			conv_id UNINDEXED,
+			body,
+			tokenize='unicode61 remove_diacritics 1'
+		);
+		CREATE TABLE IF NOT EXISTS embeddings (
+			conv_id    TEXT    PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+			vector     BLOB    NOT NULL,
+			dims       INTEGER NOT NULL,
+			model      TEXT    NOT NULL DEFAULT 'all-MiniLM-L6-v2',
+			updated_at INTEGER NOT NULL
+		);
 	`);
 }
 
@@ -218,6 +230,49 @@ export function dbUpsertExperiment(exp: Omit<ExpRecord, "created_at">): ExpRecor
 
 export function dbDeleteExperiment(id: string): void {
 	_db.prepare("DELETE FROM experiments WHERE id = ?").run(id);
+}
+
+// ── Messages ──────────────────────────────────────────────────────────────────
+
+// ── FTS + Embeddings ──────────────────────────────────────────────────────────
+
+/** Upsert the FTS index for a conversation. body = combined searchable text. */
+export function dbIndexFts(convId: string, body: string): void {
+	_db.prepare("DELETE FROM fts_conv WHERE conv_id = ?").run(convId);
+	_db.prepare("INSERT INTO fts_conv (conv_id, body) VALUES (?, ?)").run(convId, body);
+}
+
+/** BM25-ranked FTS search. Returns conv_ids ordered by relevance. */
+export function dbFtsSearch(query: string, limit = 20): Array<{ conv_id: string; rank: number }> {
+	// Sanitize query for FTS5 (escape special chars)
+	const safe = query.replace(/["*^()]/g, " ").trim();
+	if (!safe) return [];
+	try {
+		const rows = _db.prepare(
+			"SELECT conv_id, rank FROM fts_conv WHERE body MATCH ? ORDER BY rank LIMIT ?",
+		).all(safe + "*", limit) as Array<{ conv_id: string; rank: number }>;
+		// fts5 rank is negative (lower = better) — convert to 1-based rank
+		return rows.map((r, i) => ({ conv_id: r.conv_id, rank: i + 1 }));
+	} catch {
+		return [];
+	}
+}
+
+export interface EmbeddingRow { conv_id: string; vector: Buffer; dims: number; }
+
+/** Store an embedding vector for a conversation. */
+export function dbUpsertEmbedding(convId: string, vector: Buffer, dims: number): void {
+	const now = Date.now();
+	_db.prepare(`
+		INSERT INTO embeddings (conv_id, vector, dims, updated_at)
+		VALUES (?, ?, ?, ?)
+		ON CONFLICT(conv_id) DO UPDATE SET vector = excluded.vector, dims = excluded.dims, updated_at = excluded.updated_at
+	`).run(convId, vector, dims, now);
+}
+
+/** Load all stored embeddings (for in-memory cosine search). */
+export function dbLoadEmbeddings(): EmbeddingRow[] {
+	return _db.prepare("SELECT conv_id, vector, dims FROM embeddings").all() as EmbeddingRow[];
 }
 
 // ── Messages ──────────────────────────────────────────────────────────────────
