@@ -1,5 +1,6 @@
 import { callText } from "./vision.js";
 import type { ProtocolSpec, MetricSpec } from "./protocol.js";
+import type { ConvMsg } from "./db.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -9,18 +10,21 @@ export interface RFSResult {
   overall: number;         // weighted average of computed dimensions
   result: number;          // Result Fidelity (0-1), always computed when paperMetrics available
   metric: number;          // Metric Fidelity (0-1), -1 if skipped
-  protocol: number;        // Protocol Fidelity — always -1 in B1 (needs Protocol Oracle)
-  biology: number;         // Biology Validity — always -1 in B1 (needs NCBI API)
+  protocol: number;        // Protocol Fidelity (0-1), -1 if no conv msgs or no spec
+  biology: number;         // Biology Validity — always -1 (Phase D)
   warnings: string[];
   details: {
     result_per_metric: Record<string, number>;
     metric_issues: string[];
+    protocol_issues: string[];
   };
 }
 
 export interface ComputeRFSOptions {
   evalDescription?: string;  // how metrics were computed in this run (for Metric Fidelity)
+  convMsgs?: ConvMsg[];      // conversation messages for Protocol Fidelity judge
   skipMetricFidelity?: boolean;
+  skipProtocolFidelity?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +157,73 @@ export async function computeMetricFidelity(
 }
 
 // ---------------------------------------------------------------------------
+// Protocol Fidelity — LLM-as-judge comparing ProtocolSpec vs run code
+// ---------------------------------------------------------------------------
+
+function extractCodeBlocks(msgs: ConvMsg[]): string {
+  const blocks: string[] = [];
+  for (const msg of msgs) {
+    if (msg.role !== "assistant") continue;
+    // Extract fenced Python blocks
+    for (const m of msg.content.matchAll(/```(?:python|bash|sh)?\n([\s\S]*?)```/g)) {
+      if (m[1]?.trim()) blocks.push(m[1].trim());
+    }
+  }
+  // Cap at 6000 chars to stay within prompt budget
+  return blocks.join("\n\n# ---\n\n").slice(0, 6000);
+}
+
+function buildProtocolFidelityPrompt(spec: ProtocolSpec, code: string): string {
+  const p = spec.preprocess;
+  const s = spec.split;
+  const specLines = [
+    `Dataset: ${spec.dataset.name}`,
+    `Perturbation type: ${spec.perturbation_type}`,
+    `Split strategy: ${s.type}${s.note ? ` (${s.note})` : ""}`,
+    `Normalization: ${p.normalization}`,
+    p.n_hvg !== undefined ? `n_hvg (highly variable genes): ${p.n_hvg}` : null,
+    p.min_genes !== undefined ? `min_genes filter: ${p.min_genes}` : null,
+    p.note ? `Additional preprocessing note: ${p.note}` : null,
+  ].filter(Boolean).join("\n");
+
+  return `You are evaluating whether Python code correctly implements the protocol from a computational biology paper.
+
+Paper protocol specification:
+${specLines}
+
+Python code executed in this experiment:
+${code || "(no Python code blocks found in conversation)"}
+
+Check whether the code matches the protocol. Focus on:
+1. Normalization: does the code use "${p.normalization}"? (look for sc.pp.normalize_total + sc.pp.log1p or equivalent)
+2. n_hvg: does sc.pp.highly_variable_genes use n_top_genes=${p.n_hvg ?? "unspecified"}?
+3. Split: does the code implement "${s.type}"?
+4. Any other preprocessing deviation from the specification
+
+Score 1.0 = code exactly matches protocol
+Score 0.7 = one minor deviation (e.g. n_hvg off by ≤20%)
+Score 0.5 = one significant deviation (e.g. wrong normalization or n_hvg off by >20%)
+Score 0.0 = multiple major deviations or fundamentally wrong protocol
+
+If no code blocks were provided, score 0.5 and note the absence.
+
+Return JSON only: {"score": <0.0-1.0>, "issues": ["<description>"]}`;
+}
+
+export async function computeProtocolFidelity(
+  spec: ProtocolSpec,
+  convMsgs: ConvMsg[],
+): Promise<{ score: number; issues: string[] }> {
+  const code = extractCodeBlocks(convMsgs);
+  if (!code) {
+    return { score: 0.5, issues: ["No Python code blocks found in conversation — cannot verify protocol"] };
+  }
+  const prompt = buildProtocolFidelityPrompt(spec, code);
+  const result = await callText(prompt);
+  return parseJudgeResponse(result.content);
+}
+
+// ---------------------------------------------------------------------------
 // Main entry point
 // ---------------------------------------------------------------------------
 
@@ -162,7 +233,11 @@ export async function computeRFS(
   options: ComputeRFSOptions = {},
 ): Promise<RFSResult> {
   const warnings: string[] = [];
-  const details: RFSResult["details"] = { result_per_metric: {}, metric_issues: [] };
+  const details: RFSResult["details"] = {
+    result_per_metric: {},
+    metric_issues: [],
+    protocol_issues: [],
+  };
 
   // --- Result Fidelity ---
   let resultScore = -1;
@@ -190,19 +265,31 @@ export async function computeRFS(
     }
   }
 
-  // --- Stubs (future phases) ---
-  const protocolScore = -1;
-  const biologyScore = -1;
-
-  if (!spec) {
-    warnings.push("INFO [Protocol]: No ProtocolSpec provided — Protocol Fidelity skipped (use /paper-audit first).");
-  } else {
-    warnings.push("INFO [Protocol]: Protocol Fidelity not yet implemented (Phase C).");
+  // --- Protocol Fidelity ---
+  let protocolScore = -1;
+  if (spec && options.convMsgs && !options.skipProtocolFidelity) {
+    try {
+      const pf = await computeProtocolFidelity(spec, options.convMsgs);
+      protocolScore = pf.score;
+      details.protocol_issues = pf.issues;
+      for (const issue of pf.issues) {
+        warnings.push(`WARNING [Protocol]: ${issue}`);
+      }
+    } catch (err) {
+      warnings.push(`INFO [Protocol]: LLM judge failed — ${(err as Error).message}`);
+    }
+  } else if (!spec) {
+    warnings.push("INFO [Protocol]: No ProtocolSpec — run /paper-audit first.");
+  } else if (!options.convMsgs) {
+    warnings.push("INFO [Protocol]: No conversation messages provided — Protocol Fidelity skipped.");
   }
+
+  // --- Biology Validity (Phase D stub) ---
+  const biologyScore = -1;
   warnings.push("INFO [Biology]: Biology Validity not yet implemented (Phase D).");
 
-  // --- Overall score: average of computed dimensions only ---
-  const computed = [resultScore, metricScore].filter((s) => s >= 0);
+  // --- Overall: average of computed dimensions only ---
+  const computed = [resultScore, metricScore, protocolScore].filter((s) => s >= 0);
   const overall = computed.length > 0
     ? computed.reduce((a, b) => a + b, 0) / computed.length
     : -1;

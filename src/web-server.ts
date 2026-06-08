@@ -191,7 +191,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 		if (experiment) {
 			const ourMetrics = JSON.parse(experiment.metrics || "{}") as Record<string, number>;
 			const spec = findMatchingProtocol(experiment.model, experiment.dataset);
-			computeRFS(spec, ourMetrics).then(rfsResult => {
+			computeRFS(spec, ourMetrics, { convMsgs: conv.msgs }).then(rfsResult => {
 				dbUpdateExperimentRFS(experiment.id, JSON.stringify(rfsResult));
 			}).catch(() => { /* RFS is optional — ignore failures */ });
 		}
