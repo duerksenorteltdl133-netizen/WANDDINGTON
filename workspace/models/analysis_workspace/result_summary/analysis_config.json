@@ -1,8 +1,0 @@
-{
-  "analysis_id": "result_summary",
-  "display_name": "Result Summary",
-  "description": "Reads a model result JSON and prints a structured markdown summary with metric interpretation.",
-  "env_name": "sc_env",
-  "input_type": "results_json",
-  "aliases": ["summary", "result summary", "summarize results", "interpret results", "metrics summary", "metric interpretation"]
-}

@@ -1,8 +1,0 @@
-{
-  "analysis_id": "model_comparison",
-  "display_name": "Model Comparison",
-  "description": "Compares two or more backend result JSONs side-by-side in a ranked table with delta columns.",
-  "env_name": "sc_env",
-  "input_type": "results_json",
-  "aliases": ["compare", "model comparison", "compare models", "compare backends", "compare results", "leaderboard"]
-}

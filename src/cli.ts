@@ -14,7 +14,10 @@ import {
 	getWaddingtonAgentDir,
 	getWaddingtonHome,
 } from "./config/paths.js";
+import { select, isCancel } from "@clack/prompts";
+
 import { launchPiChat } from "./pi/launch.js";
+import { launchWebServer } from "./web-server.js";
 import { installPackageSources, updateConfiguredPackages } from "./pi/package-ops.js";
 import { MAX_NATIVE_PACKAGE_NODE_MAJOR } from "./pi/package-presets.js";
 import {
@@ -98,6 +101,8 @@ export async function main(): Promise<void> {
 			prompt:         { type: "string" },
 			thinking:       { type: "string" },
 			mode:           { type: "string" },
+			web:            { type: "boolean" },
+			port:           { type: "string" },
 		},
 	});
 
@@ -164,6 +169,49 @@ export async function main(): Promise<void> {
 		}
 		console.log("All packages up to date.");
 		return;
+	}
+
+	// Web UI mode: launch HTTP + WebSocket server instead of terminal TUI
+	if (values.web) {
+		const webPort = values.port ? parseInt(values.port, 10) : 3000;
+		await launchWebServer({
+			appRoot,
+			workingDir,
+			sessionDir,
+			feynmanAgentDir: agentDir,
+			feynmanVersion: version,
+			thinkingLevel: launchThinkingLevel,
+			explicitModelSpec: values.model ?? process.env.WADDINGTON_MODEL,
+		}, webPort);
+		return;
+	}
+
+	// Startup mode selector — only in interactive TTY without a pre-supplied prompt
+	if (process.stdout.isTTY && !values.prompt && !command) {
+		const choice = await select({
+			message: "How would you like to start?",
+			initialValue: "cli" as "cli" | "web",
+			options: [
+				{ value: "cli" as const, label: "Terminal  (CLI)", hint: "interactive TUI in this terminal" },
+				{ value: "web" as const, label: "Web UI",          hint: "open browser at localhost:3000" },
+			],
+		});
+
+		if (isCancel(choice)) { process.exit(0); }
+
+		if (choice === "web") {
+			const webPort = values.port ? parseInt(values.port, 10) : 3000;
+			await launchWebServer({
+				appRoot,
+				workingDir,
+				sessionDir,
+				feynmanAgentDir: agentDir,
+				feynmanVersion: version,
+				thinkingLevel: launchThinkingLevel,
+				explicitModelSpec: values.model ?? process.env.WADDINGTON_MODEL,
+			}, webPort);
+			return;
+		}
 	}
 
 	// Build initial prompt from positionals (slash commands and free text)
