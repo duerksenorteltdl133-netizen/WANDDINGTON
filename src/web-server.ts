@@ -20,6 +20,7 @@ import { generateSummary, buildSummaryContext } from "./web/summarize.js";
 import { embed, dotSim, vecToBlob, blobToVec, rrf, EMBED_DIMS } from "./web/embed.js";
 import { computeRFS } from "./web/rfs.js";
 import { loadProtocolSpec, listProtocolSlugs } from "./web/protocol.js";
+import { updateLeaderboard, loadLeaderboard, rankLeaderboard } from "./web/leaderboard.js";
 
 function readFrontendTemplate(appRoot: string): string {
 	const distPath = resolve(appRoot, "dist", "web", "index.html");
@@ -187,12 +188,24 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 			dbUpsertEmbedding(conv.id, vecToBlob(vec), EMBED_DIMS);
 		}).catch(() => { /* embedding is optional — ignore failures */ });
 
-		// Fire-and-forget: compute RFS if we have an experiment with metrics
+		// Fire-and-forget: compute RFS + update leaderboard if we have an experiment with metrics
 		if (experiment) {
 			const ourMetrics = JSON.parse(experiment.metrics || "{}") as Record<string, number>;
 			const spec = findMatchingProtocol(experiment.model, experiment.dataset);
 			computeRFS(spec, ourMetrics, { convMsgs: conv.msgs }).then(rfsResult => {
 				dbUpdateExperimentRFS(experiment.id, JSON.stringify(rfsResult));
+				// Update leaderboard with this run's metrics + RFS
+				if (experiment.dataset && experiment.model) {
+					try {
+						updateLeaderboard(
+							experiment.dataset,
+							experiment.model,
+							ourMetrics,
+							rfsResult.overall >= 0 ? rfsResult.overall : undefined,
+							conv.id,
+						);
+					} catch { /* leaderboard update is best-effort */ }
+				}
 			}).catch(() => { /* RFS is optional — ignore failures */ });
 		}
 
@@ -324,6 +337,14 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 		const spec = loadProtocolSpec(mPaper[1]);
 		if (!spec) { res.writeHead(404); res.end('{"error":"not found"}'); return; }
 		res.end(JSON.stringify(spec));
+		return;
+	}
+
+	// GET /api/leaderboard?dataset=norman2019  — ranked entries (all or filtered by dataset)
+	if (path === "/api/leaderboard" && method === "GET") {
+		const ds = new URL(req.url ?? "", "http://x").searchParams.get("dataset") ?? undefined;
+		const ranked = rankLeaderboard(ds);
+		res.end(JSON.stringify({ dataset: ds ?? null, entries: ranked, raw: loadLeaderboard() }));
 		return;
 	}
 
