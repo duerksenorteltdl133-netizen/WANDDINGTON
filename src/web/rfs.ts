@@ -12,7 +12,7 @@ export interface RFSResult {
   result: number;          // Result Fidelity (0-1), always computed when paperMetrics available
   metric: number;          // Metric Fidelity (0-1), -1 if skipped
   protocol: number;        // Protocol Fidelity (0-1), -1 if no conv msgs or no spec
-  biology: number;         // Biology Validity — always -1 (Phase D)
+  biology: number;         // Biology Validity (GO + STRING enrichment), -1 if skipped
   warnings: string[];
   details: {
     result_per_metric: Record<string, number>;

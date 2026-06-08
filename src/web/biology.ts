@@ -11,6 +11,10 @@ const GO_SCRIPT = resolve(
   getWaddingtonHome(), "..", "workspace", "evaluation", "go_enrichment.py"
 );
 
+const STRING_SCRIPT = resolve(
+  getWaddingtonHome(), "..", "workspace", "evaluation", "string_network.py"
+);
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -116,6 +120,41 @@ async function runGoEnrichment(genes: string[]): Promise<EnrichTerm[]> {
   return result.results ?? [];
 }
 
+// ---------------------------------------------------------------------------
+// STRING PPI enrichment via subprocess
+// ---------------------------------------------------------------------------
+
+interface StringPpiResult {
+  number_of_nodes: number;
+  number_of_edges: number;
+  average_node_degree?: number;
+  local_clustering_coefficient?: number;
+  expected_number_of_edges: number;
+  p_value: number;
+}
+
+async function runStringEnrichment(genes: string[]): Promise<StringPpiResult> {
+  const { stdout } = await execFileAsync(
+    "python3",
+    [STRING_SCRIPT, genes.join(",")],
+    { timeout: 20_000 },
+  );
+  const parsed = JSON.parse(stdout) as { error?: string; result?: StringPpiResult };
+  if (parsed.error) throw new Error(parsed.error);
+  if (!parsed.result) throw new Error("No PPI result returned");
+  return parsed.result;
+}
+
+function scoreFromStringPpi(result: StringPpiResult): number {
+  if (result.number_of_nodes < 3) return 0.3;  // too few genes mapped
+  const p = result.p_value;
+  if (p < 1e-5)  return 0.90;
+  if (p < 0.001) return 0.75;
+  if (p < 0.01)  return 0.60;
+  if (p < 0.05)  return 0.45;
+  return 0.20;
+}
+
 function scoreFromEnrichment(terms: EnrichTerm[]): number {
   if (terms.length === 0) return 0.3;
   const minPval = Math.min(...terms.map((t) => t.pval));
@@ -141,15 +180,21 @@ export async function computeBiologyValidity(
   const plausibility = checkMetricPlausibility(ourMetrics);
   issues.push(...plausibility.issues);
 
-  // 2. GO enrichment
-  let enrichScore = 0.5; // neutral when no enrichment
+  // 2. GO + STRING enrichment in parallel
+  let enrichScore = 0.5;   // neutral fallback
+  let stringScore: number | null = null;
   const genes = extractDeGenes(convMsgs);
 
   if (genes.length >= 3) {
-    try {
-      const terms = await runGoEnrichment(genes);
-      enrichScore = scoreFromEnrichment(terms);
+    const [goResult, stringResult] = await Promise.allSettled([
+      runGoEnrichment(genes),
+      runStringEnrichment(genes),
+    ]);
 
+    // GO Biological Process
+    if (goResult.status === "fulfilled") {
+      const terms = goResult.value;
+      enrichScore = scoreFromEnrichment(terms);
       if (terms.length > 0) {
         const top = terms[0]!;
         issues.push(`Top GO term: ${top.term} (p=${top.pval.toExponential(2)})`);
@@ -162,17 +207,40 @@ export async function computeBiologyValidity(
           `No significant GO enrichment (best p=${minP}) — DE genes may not reflect known biology`
         );
       }
-    } catch (err) {
-      issues.push(`GO enrichment unavailable: ${(err as Error).message}`);
-      // Keep enrichScore = 0.5 (neutral) on failure
+    } else {
+      issues.push(`GO enrichment unavailable: ${(goResult.reason as Error).message}`);
+    }
+
+    // STRING PPI network
+    if (stringResult.status === "fulfilled") {
+      const ppi = stringResult.value;
+      stringScore = scoreFromStringPpi(ppi);
+      if (ppi.number_of_nodes >= 3) {
+        issues.push(
+          `STRING PPI: ${ppi.number_of_edges} interactions among ${ppi.number_of_nodes} mapped genes` +
+          ` (expected ${ppi.expected_number_of_edges.toFixed(1)}, p=${ppi.p_value.toExponential(2)})`
+        );
+      } else {
+        issues.push(
+          `STRING PPI: only ${ppi.number_of_nodes} gene(s) mapped — network analysis skipped`
+        );
+        stringScore = null; // don't penalise when mapping fails
+      }
+    } else {
+      issues.push(`STRING PPI unavailable: ${(stringResult.reason as Error).message}`);
     }
   } else {
     issues.push(
-      `Too few gene symbols detected (${genes.length}) — GO enrichment skipped`
+      `Too few gene symbols detected (${genes.length}) — GO/STRING enrichment skipped`
     );
   }
 
-  // Combined: plausibility 40% + enrichment 60%
-  const score = Math.min(1, Math.max(0, 0.4 * plausibility.score + 0.6 * enrichScore));
-  return { score, issues };
+  // Combined score:
+  //   With STRING:    plausibility 30% + GO 40% + STRING 30%
+  //   Without STRING: plausibility 40% + GO 60%  (D1 fallback)
+  const score = stringScore !== null
+    ? 0.3 * plausibility.score + 0.4 * enrichScore + 0.3 * stringScore
+    : 0.4 * plausibility.score + 0.6 * enrichScore;
+
+  return { score: Math.min(1, Math.max(0, score)), issues };
 }
