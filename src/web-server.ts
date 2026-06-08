@@ -24,6 +24,7 @@ import { updateLeaderboard, loadLeaderboard, rankLeaderboard } from "./web/leade
 import { generateHypotheses } from "./web/hypothesize.js";
 import { dbListHypotheses, dbUpdateHypothesisConfidence, dbUpdateExperimentFailure } from "./web/db.js";
 import { classifyFailure } from "./web/failure.js";
+import { crystalliseSkill, listSkills, findMatchingSkill, formatSkillContext } from "./web/skills.js";
 
 function readFrontendTemplate(appRoot: string): string {
 	const distPath = resolve(appRoot, "dist", "web", "index.html");
@@ -216,6 +217,18 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 							conv.id,
 						);
 					} catch { /* leaderboard update is best-effort */ }
+					// Crystallise SKILL after RFS so best_rfs is captured
+					if (experiment.gene) {
+						try {
+							crystalliseSkill(
+								experiment.gene,
+								experiment.model,
+								experiment.dataset,
+								ourMetrics,
+								rfsResult.overall >= 0 ? rfsResult.overall : undefined,
+							);
+						} catch { /* skill crystallisation is best-effort */ }
+					}
 				}
 			}).catch(() => { /* RFS is optional */ });
 
@@ -392,6 +405,27 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 		}
 		dbUpdateHypothesisConfidence(mHyp[1]!, confidence as "speculative" | "supported" | "refuted");
 		res.end('{"ok":true}');
+		return;
+	}
+
+	// GET /api/skills?status=active — list all skills
+	if (path === "/api/skills" && method === "GET") {
+		const qs = new URL(req.url ?? "", "http://x").searchParams;
+		const status = qs.get("status") as "active" | "deprecated" | null;
+		const skills = listSkills(status ? { status } : undefined);
+		res.end(JSON.stringify(skills));
+		return;
+	}
+
+	// GET /api/skills/match?gene=CEBPE&model=GEARS&dataset=norman2019
+	if (path === "/api/skills/match" && method === "GET") {
+		const qs = new URL(req.url ?? "", "http://x").searchParams;
+		const gene = qs.get("gene") ?? "";
+		const model = qs.get("model") ?? undefined;
+		const dataset = qs.get("dataset") ?? undefined;
+		if (!gene) { res.writeHead(400); res.end('{"error":"gene required"}'); return; }
+		const skill = findMatchingSkill(gene, model, dataset);
+		res.end(JSON.stringify({ skill, context: skill ? formatSkillContext(skill) : null }));
 		return;
 	}
 
