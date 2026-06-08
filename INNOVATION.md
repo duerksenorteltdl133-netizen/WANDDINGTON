@@ -4,6 +4,32 @@
 
 ---
 
+## 零、实现状态总览（2026-06-08）
+
+| 创新点 | commit | 状态 | 核心文件 |
+|--------|--------|------|---------|
+| **基础 L1-L3 记忆** | Phase 1-5 | ✅ 已完成 | `db.ts` `summarize.ts` `embed.ts` |
+| **新增A RFS 四维评分** | A1→D2 | ✅ 已完成 | `rfs.ts` `biology.ts` `vision.ts` |
+| **补充1 Protocol Oracle** | A1, C1 | ✅ 已完成 | `protocol.ts` `paper-audit.ts` |
+| **创新6 Leaderboard 追踪** | E1 `daafa4c` | ✅ 已完成 | `leaderboard.ts` |
+| **创新2 假说生成** | E2 `7399afa` | ✅ 已完成 | `hypothesize.ts` |
+| **补充4 失败语义学** | E3 `688e8b3` | ✅ 已完成 | `failure.ts` |
+| **创新1 SKILL 技能库** | F1+F2 `0b44ded` `4082333` | ✅ 已完成 | `skills.ts` |
+| **创新3 知识图谱** | H1+H2 `e4cbbc8` | ✅ 已完成 | `knowledge-graph.ts` |
+| **创新7 生物先验验证** | D1+D2 `0622653` `c7242f1` | ✅ 已完成 | `biology.ts` `go_enrichment.py` `string_network.py` |
+| **补充2 Bio-Critic 闭环** | 部分（D1+D2） | 🟡 部分完成 | 单维度验证已有，多 agent 循环未做 |
+| **创新4 多智能体并行** | — | ❌ 暂缓 | 需重构进程管理，架构代价高 |
+| **创新5 资源感知规划** | — | ❌ 暂缓 | 无历史数据时 p̂ 无意义，待积累后实现 |
+| **新增B MSTAR 记忆进化** | — | ❌ 暂缓 | 复杂度高，非 MVP 必要条件 |
+| **新增C MCPP 规划** | — | ❌ 暂缓 | 同创新5，依赖历史数据 |
+| **新增D PerturbBench** | — | ❌ 暂缓 | 数据标注工程，非代码实现 |
+| **补充3 工作流 FSM** | — | ❌ 跳过 | FSM 本身无论文新颖性；已有 E3 失败语义学覆盖其价值 |
+| **补充5 信息增益实验选择** | — | ❌ 暂缓 | 需假说库积累后才有意义 |
+
+**论文 Core Claim 所需最小集**：✅ 全部就绪。RFS + Protocol Oracle + 生物先验 = L2/L3 完整证据链。
+
+---
+
 ## 一、为什么"PDF→代码复现"不够
 
 Claude Code 和 Codex 已经能做到：读 PDF、搜索 arXiv、安装依赖、运行 Python 脚本、执行基准测试。
@@ -27,7 +53,7 @@ Claude Code 和 Codex 已经能做到：读 PDF、搜索 arXiv、安装依赖、
 
 ## 三、创新方向
 
-### 创新 1：自进化扰动技能库（最高优先级）
+### 创新 1：自进化扰动技能库（最高优先级）✅ 已实现
 **对应论文**：MSTAR (ICLR 2026, 2604.11811)、Memento-Skills (2603.18743)、EvolveR (ICLR 2026)  
 **课程模块**：技能.md Lv.2 自进化技能系统
 
@@ -45,7 +71,7 @@ Claude Code 和 Codex 已经能做到：读 PDF、搜索 arXiv、安装依赖、
 
 ---
 
-### 创新 2：假说—实验—反思循环
+### 创新 2：假说—实验—反思循环 ✅ 已实现
 **对应论文**：Agent Laboratory (2501.04227)、Experiential Reflective Learning (2603.24639)、Advancing the Scientific Method (2505.16477)  
 **课程模块**：记忆.md Lv.3 自进化记忆库
 
@@ -67,7 +93,7 @@ CEBPE KO pearson_de=0.71 (GEARS)，与上次 CEBPA KO=0.74 相似度高（cosine
 
 ---
 
-### 创新 3：跨论文知识图谱
+### 创新 3：跨论文知识图谱 ✅ 已实现
 **对应论文**：HiGraAgent (EACL 2026, 2026.findings-eacl.62)、LinearRAG (2510.10114)、Graph RAG (2404.16130)  
 **课程模块**：记忆.md Lv.2 知识库多跳推理
 
@@ -96,7 +122,7 @@ CEBPE KO pearson_de=0.71 (GEARS)，与上次 CEBPA KO=0.74 相似度高（cosine
 
 ---
 
-### 创新 4：多智能体并行复现流水线
+### 创新 4：多智能体并行复现流水线 ❌ 暂缓（架构代价高）
 **对应论文**：CellAgent (ICLR 2026)、Multi-Agent Collaboration via Evolving Orchestration (ICLR 2025)  
 **课程模块**：编排.md Lv.2/3 进阶静态/动态编排
 
@@ -119,7 +145,7 @@ Agent E (Comparator)    → 与论文报告指标对比，生成差异分析
 
 ---
 
-### 创新 5：资源感知实验计划
+### 创新 5：资源感知实验计划 ❌ 暂缓（依赖历史数据积累）
 **对应论文**：On Time, Within Budget (2605.06110)、DecisionBench (2605.19099)  
 **课程模块**：编排.md Lv.3 进阶动态编排
 
@@ -141,7 +167,7 @@ scGPT 全量需要 24GB，建议：
 
 ---
 
-### 创新 6：基准演进追踪器
+### 创新 6：基准演进追踪器 ✅ 已实现
 **对应论文**：PaperArena (2510.10909)、SciAgentGym (2602.12984)
 
 **Claude Code 的局限**：不知道 GEARS 在 Norman2019 上的 SOTA 是 2023 年 0.71，后来被 scGPT 超越到 0.74。  
@@ -154,7 +180,7 @@ scGPT 全量需要 24GB，建议：
 
 ---
 
-### 创新 7：生物学先验约束验证（最具差异化）
+### 创新 7：生物学先验约束验证（最具差异化）✅ 已实现
 **背景**：这是任何通用编码助手无法复制的核心护城河。
 
 **Claude Code 的局限**：跑完 GEARS，输出 pearson_de=0.71，会话结束。它不知道 CEBPE 应该调控哪些下游基因，也无法判断结果在生物学上是否合理。  
@@ -189,21 +215,29 @@ CellAgent 是最接近的竞品，但它专注于**分析**（scRNA-seq 处理�
 
 ---
 
-## 五、实施优先级建议
+## 五、实施优先级建议（已更新至 2026-06-08）
 
 ```
-立即可做（已有基础，扩展即可）：
-  创新6 - Leaderboard 追踪器（experiments 表已有数据）
-  创新2 - 假说生成（在 /process 后加一步 LLM 调用）
+✅ 已完成：
+  创新1  - 自进化技能库 (F1+F2)
+  创新2  - 假说生成 (E2)
+  创新3  - 知识图谱 (H1+H2)
+  创新6  - Leaderboard 追踪器 (E1)
+  创新7  - 生物先验验证 (D1+D2)
+  新增A  - RFS 四维评分 (A1→D2)
+  补充1  - Protocol Oracle
+  补充4  - 失败语义学 (E3)
 
-中期（需新增模块）：
-  创新1 - 自进化技能库（最高 ROI，核心差异化）
-  创新7 - 生物先验验证（接入 NCBI/STRING API）
+❌ 暂缓（不影响论文 Core Claim）：
+  创新4  - 多智能体并行（架构重构代价高）
+  创新5  - 资源感知规划（依赖历史实验数据积累）
+  新增B  - MSTAR 记忆进化（复杂度高）
+  新增C  - MCPP 规划（同创新5）
+  新增D  - PerturbBench（数据标注工程，非代码）
+  补充5  - 信息增益实验选择（依赖假说库积累）
 
-长期（架构变动）：
-  创新3 - 知识图谱（需设计图数据库 schema）
-  创新4 - 并行多智能体（需重构 web-server.ts 进程管理）
-  创新5 - 资源感知规划（需积累资源画像数据）
+❌ 跳过（无独立论文新颖性）：
+  补充3  - 工作流 FSM（FSM 本身无创新；E3 失败语义学已覆盖其核心价值）
 ```
 
 ---
@@ -216,7 +250,7 @@ CellAgent 是最接近的竞品，但它专注于**分析**（scRNA-seq 处理�
 
 ---
 
-### 新增 A：复现保真度分数（RFS）——**最直接的论文贡献**
+### 新增 A：复现保真度分数（RFS）——**最直接的论文贡献** ✅ 已实现（A1→D2）
 
 **灵感**：DecisionBench（2605.19099）的核心发现：*"quality-only evaluation would miss the orchestration signal"*，过程级指标揭示了比结果指标多 15–31pp 的隐藏性能空间。
 
@@ -282,7 +316,7 @@ export async function computeRFS(
 
 ---
 
-### 新增 B：MSTAR 风格的记忆程序进化
+### 新增 B：MSTAR 风格的记忆程序进化 ❌ 暂缓
 
 **灵感**：MSTAR（2604.11811）把记忆表示为可执行 Python 模块（Schema/Logic/Instruction），通过 reflective code evolution 自动搜索最优记忆结构。关键发现：**每个任务有自己最优的记忆结构，通用记忆会显著降低性能**。
 
@@ -306,7 +340,7 @@ class DebugMemory:
 
 ---
 
-### 新增 C：概率性成功最大化规划（MCPP for Bioinformatics）
+### 新增 C：概率性成功最大化规划（MCPP for Bioinformatics）❌ 暂缓（依赖历史数据积累）
 
 **灵感**：On Time Within Budget（2605.06110）把 agentic workflow 执行形式化为：给定 budget B 和 deadline D，最大化 P(workflow completes | B, D)，用 Monte Carlo Portfolio Planning 在线分配资源。
 
@@ -329,7 +363,7 @@ P(至少1个full成功) = 1 - (1-0.85) = 0.85 → 在8h内有0.92概率有成果
 
 ---
 
-### 新增 D：PerturbBench — 计算生物学论文复现基准（最大影响力）
+### 新增 D：PerturbBench — 计算生物学论文复现基准（最大影响力）❌ 暂缓（数据标注工程）
 
 **灵感**：DecisionBench 通过建立标准 benchmark，让所有 agent 方法在同一尺度上被评测，成为该方向的基础设施论文。
 
@@ -349,7 +383,7 @@ P(至少1个full成功) = 1 - (1-0.85) = 0.85 → 在8h内有0.92概率有成果
 
 > 读完课程的「编排 / 记忆 / 技能」模块，再对照 ICLR 2025/2026 的 agent 论文后，我建议不要把 Waddington 包装成"更会写代码的 Claude Code"，而要包装成一个**可审计、可学习、可验证的领域科学工作流系统**。
 
-### 补充 1：Protocol Oracle，而不是单纯 Code Agent
+### 补充 1：Protocol Oracle，而不是单纯 Code Agent ✅ 已实现
 
 **核心想法**：通用 agent 的强项是写代码，弱项是判断"这段代码是否忠实执行了论文协议"。Waddington 应该把论文中的 protocol 抽取成机器可检查的 `ProtocolSpec`，再用它约束复现脚本。
 
@@ -388,7 +422,7 @@ metric:
 
 推荐先用 `marker-pdf` 替换 `unpdf`，这是 Protocol Oracle 能否自动化的关键前提。
 
-### 补充 2：Bio-Critic 闭环，把"跑出来"变成"科学上可信"
+### 补充 2：Bio-Critic 闭环，把"跑出来"变成"科学上可信" 🟡 部分完成
 
 **核心想法**：把 reviewer / data-analyst / verifier 三个 subagent 组织成一个固定的批判循环：
 
@@ -408,7 +442,7 @@ verifier 检查每个 benchmark 数字和 citation/provenance
 
 **与 CellAgent 的区别**：CellAgent 证明了单细胞自然语言分析可以用多 agent 做；Waddington 可以进一步主张：**单细胞扰动复现需要 adversarial scientific verification，而不仅是 workflow completion**。
 
-### 补充 3：领域约束的工作流自适应（受 AFlow 启发，但设计更保守）
+### 补充 3：领域约束的工作流自适应（受 AFlow 启发，但设计更保守）❌ 跳过
 
 AFlow (ICLR 2025) 把 agentic workflow optimization 形式化为代码表示的 workflow 搜索。Waddington 不做开放空间的 MCTS 搜索，而是限定在一个生物学 DSL 内做**有限状态机式的失败自适应**——搜索空间小、可解释、成本可控：
 
@@ -432,7 +466,7 @@ workflow:
 
 **创新点**：不是泛化的 workflow search，而是**领域约束的工作流自适应**。它更容易评测，也更容易向导师解释：Waddington 学到的不是"怎么聊天"，而是"这类论文复现时哪些步骤最容易失败、怎样恢复"。实现难度远低于 AFlow，但对 domain-specific agent 更实用。
 
-### 补充 4：从"成功率"改成"失败语义学"
+### 补充 4：从"成功率"改成"失败语义学" ✅ 已实现
 
 ScienceAgentBench 和 BixBench 都说明了当前 agent 在科学任务上远远没有稳定到可以谈完全自动化。Waddington 可以把失败本身变成研究贡献：对复现失败做结构化分类。
 
@@ -446,7 +480,7 @@ ScienceAgentBench 和 BixBench 都说明了当前 agent 在科学任务上远远
 
 这能直接回应导师的疑问：Claude Code 也会失败，但它通常只把失败当 bug；Waddington 把失败变成可积累的科学知识和下一次规划的输入。
 
-### 补充 5：信息增益驱动的实验选择
+### 补充 5：信息增益驱动的实验选择 ❌ 暂缓（需假说库积累后才有意义）
 
 闭环科学 agent 的关键不应只是"下一个实验能不能成功"，而是"下一个实验能最大程度区分哪些假说"。对 Waddington 来说，可以维护一个 hypothesis set：
 
