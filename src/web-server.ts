@@ -21,6 +21,8 @@ import { embed, dotSim, vecToBlob, blobToVec, rrf, EMBED_DIMS } from "./web/embe
 import { computeRFS } from "./web/rfs.js";
 import { loadProtocolSpec, listProtocolSlugs } from "./web/protocol.js";
 import { updateLeaderboard, loadLeaderboard, rankLeaderboard } from "./web/leaderboard.js";
+import { generateHypotheses } from "./web/hypothesize.js";
+import { dbListHypotheses, dbUpdateHypothesisConfidence } from "./web/db.js";
 
 function readFrontendTemplate(appRoot: string): string {
 	const distPath = resolve(appRoot, "dist", "web", "index.html");
@@ -188,13 +190,12 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 			dbUpsertEmbedding(conv.id, vecToBlob(vec), EMBED_DIMS);
 		}).catch(() => { /* embedding is optional — ignore failures */ });
 
-		// Fire-and-forget: compute RFS + update leaderboard if we have an experiment with metrics
+		// Fire-and-forget: compute RFS + update leaderboard + generate hypotheses
 		if (experiment) {
 			const ourMetrics = JSON.parse(experiment.metrics || "{}") as Record<string, number>;
 			const spec = findMatchingProtocol(experiment.model, experiment.dataset);
 			computeRFS(spec, ourMetrics, { convMsgs: conv.msgs }).then(rfsResult => {
 				dbUpdateExperimentRFS(experiment.id, JSON.stringify(rfsResult));
-				// Update leaderboard with this run's metrics + RFS
 				if (experiment.dataset && experiment.model) {
 					try {
 						updateLeaderboard(
@@ -206,7 +207,20 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 						);
 					} catch { /* leaderboard update is best-effort */ }
 				}
-			}).catch(() => { /* RFS is optional — ignore failures */ });
+			}).catch(() => { /* RFS is optional */ });
+
+			// Fire-and-forget: hypothesis generation (after experiment extracted)
+			if (experiment.gene) {
+				generateHypotheses(
+					experiment.gene,
+					experiment.model,
+					experiment.dataset,
+					JSON.parse(experiment.metrics || "{}") as Record<string, number>,
+					conv.msgs,
+					experiment.id,
+					conv.id,
+				).catch(() => { /* hypotheses are optional */ });
+			}
 		}
 
 		res.writeHead(201);
@@ -345,6 +359,29 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 		const ds = new URL(req.url ?? "", "http://x").searchParams.get("dataset") ?? undefined;
 		const ranked = rankLeaderboard(ds);
 		res.end(JSON.stringify({ dataset: ds ?? null, entries: ranked, raw: loadLeaderboard() }));
+		return;
+	}
+
+	// GET /api/hypotheses?gene=CEBPE&limit=10 — list hypotheses, optionally filtered
+	if (path === "/api/hypotheses" && method === "GET") {
+		const qs = new URL(req.url ?? "", "http://x").searchParams;
+		const gene = qs.get("gene") ?? undefined;
+		const limit = parseInt(qs.get("limit") ?? "20", 10);
+		const rows = dbListHypotheses({ gene, limit });
+		res.end(JSON.stringify(rows));
+		return;
+	}
+
+	// PATCH /api/hypotheses/:id — update confidence label
+	const mHyp = path.match(/^\/api\/hypotheses\/([^/]+)$/);
+	if (mHyp && method === "PATCH") {
+		const body = await readBody(req) as JsonBody;
+		const confidence = body["confidence"] as string;
+		if (!["speculative", "supported", "refuted"].includes(confidence)) {
+			res.writeHead(400); res.end('{"error":"confidence must be speculative|supported|refuted"}'); return;
+		}
+		dbUpdateHypothesisConfidence(mHyp[1]!, confidence as "speculative" | "supported" | "refuted");
+		res.end('{"ok":true}');
 		return;
 	}
 

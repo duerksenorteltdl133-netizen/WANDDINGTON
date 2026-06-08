@@ -115,6 +115,25 @@ export function openDb(dbPath: string): void {
 	`);
 	// Migration: add rfs_json to experiments for existing databases
 	try { _db.exec("ALTER TABLE experiments ADD COLUMN rfs_json TEXT"); } catch { /* already exists */ }
+
+	// Hypotheses table (created in E2, idempotent)
+	_db.exec(`
+		CREATE TABLE IF NOT EXISTS hypotheses (
+			id            TEXT    PRIMARY KEY,
+			gene          TEXT    NOT NULL,
+			related_genes TEXT    NOT NULL DEFAULT '[]',  -- JSON string[]
+			model         TEXT,
+			dataset       TEXT,
+			hypothesis    TEXT    NOT NULL,
+			evidence      TEXT    NOT NULL DEFAULT '',
+			confidence    TEXT    NOT NULL DEFAULT 'speculative',  -- speculative | supported | refuted
+			exp_id        TEXT    REFERENCES experiments(id) ON DELETE SET NULL,
+			conv_id       TEXT    REFERENCES conversations(id) ON DELETE SET NULL,
+			created_at    INTEGER NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_hyp_gene ON hypotheses(gene);
+		CREATE INDEX IF NOT EXISTS idx_hyp_time ON hypotheses(created_at DESC);
+	`);
 }
 
 // ── Conversations ─────────────────────────────────────────────────────────────
@@ -280,6 +299,46 @@ export function dbUpsertEmbedding(convId: string, vector: Buffer, dims: number):
 /** Load all stored embeddings (for in-memory cosine search). */
 export function dbLoadEmbeddings(): EmbeddingRow[] {
 	return _db.prepare("SELECT conv_id, vector, dims FROM embeddings").all() as EmbeddingRow[];
+}
+
+// ── Hypotheses ────────────────────────────────────────────────────────────────
+
+export interface HypothesisRecord {
+	id: string;
+	gene: string;
+	related_genes: string;   // JSON string[]
+	model: string | null;
+	dataset: string | null;
+	hypothesis: string;
+	evidence: string;
+	confidence: "speculative" | "supported" | "refuted";
+	exp_id: string | null;
+	conv_id: string | null;
+	created_at: number;
+}
+
+export function dbInsertHypothesis(h: Omit<HypothesisRecord, "created_at">): HypothesisRecord {
+	const now = Date.now();
+	_db.prepare(`
+		INSERT INTO hypotheses
+			(id, gene, related_genes, model, dataset, hypothesis, evidence, confidence, exp_id, conv_id, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`).run(h.id, h.gene, h.related_genes, h.model ?? null, h.dataset ?? null,
+	       h.hypothesis, h.evidence, h.confidence, h.exp_id ?? null, h.conv_id ?? null, now);
+	return { ...h, created_at: now };
+}
+
+export function dbListHypotheses(filter?: { gene?: string; limit?: number }): HypothesisRecord[] {
+	let sql = "SELECT * FROM hypotheses";
+	const params: unknown[] = [];
+	if (filter?.gene) { sql += " WHERE gene = ?"; params.push(filter.gene); }
+	sql += " ORDER BY created_at DESC";
+	if (filter?.limit) { sql += " LIMIT ?"; params.push(filter.limit); }
+	return _db.prepare(sql).all(...params) as HypothesisRecord[];
+}
+
+export function dbUpdateHypothesisConfidence(id: string, confidence: "speculative" | "supported" | "refuted"): void {
+	_db.prepare("UPDATE hypotheses SET confidence = ? WHERE id = ?").run(confidence, id);
 }
 
 // ── Messages ──────────────────────────────────────────────────────────────────
