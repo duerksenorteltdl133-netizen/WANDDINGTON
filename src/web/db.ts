@@ -19,9 +19,10 @@ export interface ExpRecord {
 	gene: string | null;
 	model: string | null;
 	dataset: string | null;
-	metrics: string;   // JSON
+	metrics: string;            // JSON
 	notes: string | null;
-	rfs_json: string | null;  // JSON-serialised RFSResult, computed async
+	rfs_json: string | null;    // JSON-serialised RFSResult, computed async
+	failure_json: string | null; // JSON-serialised FailureRecord, computed async
 	created_at: number;
 }
 
@@ -113,8 +114,9 @@ export function openDb(dbPath: string): void {
 			updated_at INTEGER NOT NULL
 		);
 	`);
-	// Migration: add rfs_json to experiments for existing databases
+	// Migrations for existing databases
 	try { _db.exec("ALTER TABLE experiments ADD COLUMN rfs_json TEXT"); } catch { /* already exists */ }
+	try { _db.exec("ALTER TABLE experiments ADD COLUMN failure_json TEXT"); } catch { /* already exists */ }
 
 	// Hypotheses table (created in E2, idempotent)
 	_db.exec(`
@@ -240,14 +242,20 @@ export function dbListExperiments(filter?: { gene?: string; model?: string; limi
 export function dbUpsertExperiment(exp: Omit<ExpRecord, "created_at">): ExpRecord {
 	const now = Date.now();
 	_db.prepare(`
-		INSERT INTO experiments (id, conv_id, gene, model, dataset, metrics, notes, rfs_json, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO experiments (id, conv_id, gene, model, dataset, metrics, notes, rfs_json, failure_json, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			gene = excluded.gene, model = excluded.model, dataset = excluded.dataset,
-			metrics = excluded.metrics, notes = excluded.notes, rfs_json = excluded.rfs_json
+			metrics = excluded.metrics, notes = excluded.notes,
+			rfs_json = excluded.rfs_json, failure_json = excluded.failure_json
 	`).run(exp.id, exp.conv_id ?? null, exp.gene ?? null, exp.model ?? null,
-	       exp.dataset ?? null, exp.metrics, exp.notes ?? null, exp.rfs_json ?? null, now);
+	       exp.dataset ?? null, exp.metrics, exp.notes ?? null,
+	       exp.rfs_json ?? null, exp.failure_json ?? null, now);
 	return { ...exp, created_at: now };
+}
+
+export function dbUpdateExperimentFailure(id: string, failureJson: string): void {
+	_db.prepare("UPDATE experiments SET failure_json = ? WHERE id = ?").run(failureJson, id);
 }
 
 export function dbUpdateExperimentRFS(id: string, rfsJson: string): void {

@@ -22,7 +22,8 @@ import { computeRFS } from "./web/rfs.js";
 import { loadProtocolSpec, listProtocolSlugs } from "./web/protocol.js";
 import { updateLeaderboard, loadLeaderboard, rankLeaderboard } from "./web/leaderboard.js";
 import { generateHypotheses } from "./web/hypothesize.js";
-import { dbListHypotheses, dbUpdateHypothesisConfidence } from "./web/db.js";
+import { dbListHypotheses, dbUpdateHypothesisConfidence, dbUpdateExperimentFailure } from "./web/db.js";
+import { classifyFailure } from "./web/failure.js";
 
 function readFrontendTemplate(appRoot: string): string {
 	const distPath = resolve(appRoot, "dist", "web", "index.html");
@@ -136,6 +137,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 			metrics: JSON.stringify(extracted.metrics),
 			notes:   null,
 			rfs_json: null,
+			failure_json: null,
 		});
 		res.writeHead(201);
 		res.end(JSON.stringify({ ok: true, experiment: exp }));
@@ -161,6 +163,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 				metrics: JSON.stringify(extracted.metrics),
 				notes:   null,
 				rfs_json: null,
+				failure_json: null,
 			});
 		}
 
@@ -194,6 +197,13 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 		if (experiment) {
 			const ourMetrics = JSON.parse(experiment.metrics || "{}") as Record<string, number>;
 			const spec = findMatchingProtocol(experiment.model, experiment.dataset);
+
+			// Synchronous failure classification (pattern-based, no LLM)
+			const failure = classifyFailure(conv.msgs);
+			if (failure) {
+				try { dbUpdateExperimentFailure(experiment.id, JSON.stringify(failure)); } catch { /* best-effort */ }
+			}
+
 			computeRFS(spec, ourMetrics, { convMsgs: conv.msgs }).then(rfsResult => {
 				dbUpdateExperimentRFS(experiment.id, JSON.stringify(rfsResult));
 				if (experiment.dataset && experiment.model) {
