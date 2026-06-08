@@ -204,6 +204,72 @@ export async function renderPdfPages(
 }
 
 // ---------------------------------------------------------------------------
+// Text-only LLM call (same provider routing, no image)
+// ---------------------------------------------------------------------------
+
+export async function callText(
+  prompt: string,
+  override?: { provider?: string; model?: string },
+): Promise<VisionResult> {
+  const current = readCurrentModel();
+  const provider = override?.provider ?? current.provider;
+  const model = override?.model ?? current.model;
+
+  if (provider === "anthropic") {
+    const { default: Anthropic } = await import("@anthropic-ai/sdk");
+    const client = new Anthropic();
+    const r = await client.messages.create({
+      model, max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
+    const t = r.content.find((b) => b.type === "text");
+    return { provider, model, content: t?.text ?? "" };
+  }
+
+  if (provider === "openai" || provider === "openai-codex") {
+    const { default: OpenAI } = await import("openai");
+    const baseURL = OPENAI_COMPAT_BASE[provider];
+    const client = new OpenAI({ ...(baseURL ? { baseURL } : {}) });
+    const r = await client.chat.completions.create({
+      model, max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
+    return { provider, model, content: r.choices[0]?.message?.content ?? "" };
+  }
+
+  if (provider === "google" || provider === "google-gemini-cli") {
+    const { GoogleGenAI } = await import("@google/genai");
+    const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? "";
+    const client = new GoogleGenAI({ apiKey });
+    const r = await client.models.generateContent({
+      model,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    });
+    return { provider, model, content: r.candidates?.[0]?.content?.parts?.[0]?.text ?? "" };
+  }
+
+  if (provider === "kimi-coding") {
+    const { default: OpenAI } = await import("openai");
+    const client = new OpenAI({ baseURL: OPENAI_COMPAT_BASE["kimi-coding"] });
+    const r = await client.chat.completions.create({
+      model, max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
+    });
+    return { provider, model, content: r.choices[0]?.message?.content ?? "" };
+  }
+
+  // Fallback: Anthropic haiku
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const client = new Anthropic();
+  const r = await client.messages.create({
+    model: "claude-haiku-4-5-20251001", max_tokens: 1024,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const t = r.content.find((b) => b.type === "text");
+  return { provider: "anthropic-fallback", model: "claude-haiku-4-5-20251001", content: t?.text ?? "" };
+}
+
+// ---------------------------------------------------------------------------
 // High-level: extract tables from a PDF as CSV strings
 // ---------------------------------------------------------------------------
 
