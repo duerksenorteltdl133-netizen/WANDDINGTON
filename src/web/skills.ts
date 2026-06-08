@@ -1,10 +1,19 @@
 import { existsSync, readFileSync, writeFileSync, readdirSync, mkdirSync } from "node:fs";
-import { resolve, basename } from "node:path";
+import { resolve } from "node:path";
 import { getWaddingtonHome } from "../config/paths.js";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+// Patch record written by F3 skill-refine loop
+export interface SkillPatch {
+  date: string;
+  type: "discovery" | "optimization" | "skill_defect" | "execution_lapse";
+  evidence: string;   // what in the failure+skill supports this classification
+  rationale: string;  // what changed and why
+  auditor_passed: boolean;
+}
 
 export type GeneClass =
   | "transcription_factor"
@@ -46,6 +55,10 @@ export interface SkillRecord {
   status: "active" | "deprecated";
   created_at: string;         // ISO date
   updated_at: string;
+
+  // F3 refinement (added by skill-refine loop)
+  appendix?: string;          // execution-lapse notes: emphasis text, never changes rules
+  patch_history?: SkillPatch[];  // ordered log of all audited patches
 }
 
 // ---------------------------------------------------------------------------

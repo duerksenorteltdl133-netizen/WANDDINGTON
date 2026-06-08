@@ -25,6 +25,7 @@ import { generateHypotheses, getHypothesesForGene, formatHypothesesContext } fro
 import { dbListHypotheses, dbUpdateHypothesisConfidence, dbUpdateExperimentFailure } from "./web/db.js";
 import { classifyFailure } from "./web/failure.js";
 import { crystalliseSkill, listSkills, findMatchingSkill, formatSkillContext } from "./web/skills.js";
+import { refineSkill } from "./web/skill-refine.js";
 import { seedFromProtocol, extractAndStoreKg, queryNeighbourhood, kgStats } from "./web/knowledge-graph.js";
 
 function readFrontendTemplate(appRoot: string): string {
@@ -229,6 +230,23 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 								rfsResult.overall >= 0 ? rfsResult.overall : undefined,
 							);
 						} catch { /* skill crystallisation is best-effort */ }
+
+						// F3: if a failure was detected, fire-and-forget skill refinement
+						if (failure) {
+							const existingSkill = findMatchingSkill(
+								experiment.gene,
+								experiment.model ?? undefined,
+								experiment.dataset ?? undefined,
+							);
+							if (existingSkill) {
+								refineSkill(
+									existingSkill.slug,
+									failure,
+									conv.msgs,
+									spec ?? undefined,
+								).catch(() => { /* refinement is best-effort */ });
+							}
+						}
 					}
 				}
 			}).catch(() => { /* RFS is optional */ });
