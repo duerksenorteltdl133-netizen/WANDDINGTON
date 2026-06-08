@@ -14,7 +14,7 @@
 | **创新6 Leaderboard 追踪** | E1 `daafa4c` | ✅ 已完成 | `leaderboard.ts` |
 | **创新2 假说生成** | E2 `7399afa` | ✅ 已完成 | `hypothesize.ts` |
 | **补充4 失败语义学** | E3 `688e8b3` | ✅ 已完成 | `failure.ts` |
-| **创新1 SKILL 技能库** | F1+F2 `0b44ded` `4082333` | ✅ 已完成 | `skills.ts` |
+| **创新1 SKILL 技能库** | F1+F2+F3 `0b44ded` `4082333` `a3b1b78` | ✅ 已完成 | `skills.ts` `skill-refine.ts` |
 | **创新3 知识图谱** | H1+H2 `e4cbbc8` | ✅ 已完成 | `knowledge-graph.ts` |
 | **创新7 生物先验验证** | D1+D2 `0622653` `c7242f1` | ✅ 已完成 | `biology.ts` `go_enrichment.py` `string_network.py` |
 | **补充2 Bio-Critic 闭环** | 部分（D1+D2） | 🟡 部分完成 | 单维度验证已有，多 agent 循环未做 |
@@ -219,7 +219,7 @@ CellAgent 是最接近的竞品，但它专注于**分析**（scRNA-seq 处理�
 
 ```
 ✅ 已完成：
-  创新1  - 自进化技能库 (F1+F2)
+  创新1  - 自进化技能库 (F1+F2+F3)
   创新2  - 假说生成 (E2)
   创新3  - 知识图谱 (H1+H2)
   创新6  - Leaderboard 追踪器 (E1)
@@ -571,3 +571,5 @@ Core Claim（回应导师问题）：
 | PaperBench: Evaluating AI's Ability to Replicate AI Research | https://openai.com/index/paperbench/ |
 | BixBench: a Comprehensive Benchmark for LLM-based Agents in Computational Biology | https://arxiv.org/abs/2503.00096 |
 | LMR-BENCH: Evaluating LLM Agent's Ability on Reproducing Language Modeling Research（NLP 论文复现，非计算生物学） | https://arxiv.org/abs/2506.17335 |
+| SkillEvolver: Skill Learning as a Meta-Skill (2025) | `/home/duanyu/文档/Paper/2605.10500v1.pdf` |
+| EmbodíSkill: Skill-Aware Reflection for Self-Evolving Embodied Agents (2025) | `/home/duanyu/文档/Paper/2605.10332v1.pdf` |
