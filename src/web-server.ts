@@ -21,7 +21,7 @@ import { embed, dotSim, vecToBlob, blobToVec, rrf, EMBED_DIMS } from "./web/embe
 import { computeRFS } from "./web/rfs.js";
 import { loadProtocolSpec, listProtocolSlugs } from "./web/protocol.js";
 import { updateLeaderboard, loadLeaderboard, rankLeaderboard } from "./web/leaderboard.js";
-import { generateHypotheses } from "./web/hypothesize.js";
+import { generateHypotheses, getHypothesesForGene, formatHypothesesContext } from "./web/hypothesize.js";
 import { dbListHypotheses, dbUpdateHypothesisConfidence, dbUpdateExperimentFailure } from "./web/db.js";
 import { classifyFailure } from "./web/failure.js";
 import { crystalliseSkill, listSkills, findMatchingSkill, formatSkillContext } from "./web/skills.js";
@@ -555,6 +555,14 @@ export async function launchWebServer(options: PiRuntimeOptions, port = 3000): P
 			const gene = match[1].toUpperCase();
 			const exps = dbListExperiments({ gene, limit: 4 });
 			if (exps.length) prefix += buildContextPrefix(gene, exps);
+
+			// Inject SKILL context if a matching skill exists
+			const skill = findMatchingSkill(gene);
+			if (skill) prefix += formatSkillContext(skill) + "\n\n";
+
+			// Inject relevant hypotheses (supported ones first)
+			const hyps = getHypothesesForGene(gene, 3);
+			if (hyps.length) prefix += formatHypothesesContext(hyps) + "\n\n";
 
 			const sums = dbListSummaries({ limit: 50 });
 			const sumCtx = buildSummaryContext(sums, [gene]);
