@@ -282,6 +282,51 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 		return;
 	}
 
+	// POST /api/papers/audit — extract ProtocolSpec from a local PDF
+	// Body: { pdf_path: string, slug?: string, skip_tables?: boolean }
+	if (path === "/api/papers/audit" && method === "POST") {
+		const body = (await readBody(req)) as JsonBody;
+		const pdfPath = typeof body.pdf_path === "string" ? body.pdf_path : null;
+		if (!pdfPath) {
+			res.writeHead(400); res.end('{"error":"pdf_path is required"}'); return;
+		}
+		const { auditPaper, slugFromFilename } = await import("./web/paper-audit.js");
+		const slug = typeof body.slug === "string" && body.slug
+			? body.slug
+			: slugFromFilename(pdfPath);
+		const skipTables = body.skip_tables === true;
+		try {
+			const spec = await auditPaper(pdfPath, slug, { skipTableExtraction: skipTables });
+			res.writeHead(201);
+			res.end(JSON.stringify({ ok: true, slug, spec }));
+		} catch (err) {
+			res.writeHead(500);
+			res.end(JSON.stringify({ error: (err as Error).message }));
+		}
+		return;
+	}
+
+	// GET /api/papers — list available ProtocolSpec slugs
+	if (path === "/api/papers" && method === "GET") {
+		const { listProtocolSlugs, loadProtocolSpec } = await import("./web/protocol.js");
+		const slugs = listProtocolSlugs();
+		const papers = slugs.map(s => {
+			const spec = loadProtocolSpec(s);
+			return { slug: s, title: spec?.paper_title, dataset: spec?.dataset?.name, annotated_by: spec?.annotated_by };
+		});
+		res.end(JSON.stringify(papers));
+		return;
+	}
+
+	// GET /api/papers/:slug — get a specific ProtocolSpec
+	const mPaper = path.match(/^\/api\/papers\/([^/]+)$/);
+	if (mPaper && method === "GET") {
+		const spec = loadProtocolSpec(mPaper[1]);
+		if (!spec) { res.writeHead(404); res.end('{"error":"not found"}'); return; }
+		res.end(JSON.stringify(spec));
+		return;
+	}
+
 	res.writeHead(404);
 	res.end('{"error":"not found"}');
 }
