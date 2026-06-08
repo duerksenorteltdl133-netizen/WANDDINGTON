@@ -1,6 +1,7 @@
 import { callText } from "./vision.js";
 import type { ProtocolSpec, MetricSpec } from "./protocol.js";
 import type { ConvMsg } from "./db.js";
+import { computeBiologyValidity } from "./biology.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,14 +18,16 @@ export interface RFSResult {
     result_per_metric: Record<string, number>;
     metric_issues: string[];
     protocol_issues: string[];
+    biology_issues: string[];
   };
 }
 
 export interface ComputeRFSOptions {
   evalDescription?: string;  // how metrics were computed in this run (for Metric Fidelity)
-  convMsgs?: ConvMsg[];      // conversation messages for Protocol Fidelity judge
+  convMsgs?: ConvMsg[];      // conversation messages for Protocol + Biology judges
   skipMetricFidelity?: boolean;
   skipProtocolFidelity?: boolean;
+  skipBiologyValidity?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -237,6 +240,7 @@ export async function computeRFS(
     result_per_metric: {},
     metric_issues: [],
     protocol_issues: [],
+    biology_issues: [],
   };
 
   // --- Result Fidelity ---
@@ -284,12 +288,26 @@ export async function computeRFS(
     warnings.push("INFO [Protocol]: No conversation messages provided — Protocol Fidelity skipped.");
   }
 
-  // --- Biology Validity (Phase D stub) ---
-  const biologyScore = -1;
-  warnings.push("INFO [Biology]: Biology Validity not yet implemented (Phase D).");
+  // --- Biology Validity ---
+  let biologyScore = -1;
+  if (options.convMsgs && !options.skipBiologyValidity) {
+    try {
+      const bv = await computeBiologyValidity(ourMetrics, options.convMsgs, spec ?? undefined);
+      biologyScore = bv.score;
+      details.biology_issues = bv.issues;
+      for (const issue of bv.issues) {
+        const level = issue.startsWith("Top GO") || issue.startsWith("Too few") ? "INFO" : "WARNING";
+        warnings.push(`${level} [Biology]: ${issue}`);
+      }
+    } catch (err) {
+      warnings.push(`INFO [Biology]: Computation failed — ${(err as Error).message}`);
+    }
+  } else if (!options.convMsgs) {
+    warnings.push("INFO [Biology]: No conversation messages — Biology Validity skipped.");
+  }
 
   // --- Overall: average of computed dimensions only ---
-  const computed = [resultScore, metricScore, protocolScore].filter((s) => s >= 0);
+  const computed = [resultScore, metricScore, protocolScore, biologyScore].filter((s) => s >= 0);
   const overall = computed.length > 0
     ? computed.reduce((a, b) => a + b, 0) / computed.length
     : -1;
