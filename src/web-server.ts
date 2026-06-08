@@ -25,6 +25,7 @@ import { generateHypotheses, getHypothesesForGene, formatHypothesesContext } fro
 import { dbListHypotheses, dbUpdateHypothesisConfidence, dbUpdateExperimentFailure } from "./web/db.js";
 import { classifyFailure } from "./web/failure.js";
 import { crystalliseSkill, listSkills, findMatchingSkill, formatSkillContext } from "./web/skills.js";
+import { seedFromProtocol, extractAndStoreKg, queryNeighbourhood, kgStats } from "./web/knowledge-graph.js";
 
 function readFrontendTemplate(appRoot: string): string {
 	const distPath = resolve(appRoot, "dist", "web", "index.html");
@@ -246,6 +247,12 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 			}
 		}
 
+		// Fire-and-forget: extract KG entities if this was a /discuss or /replicate session
+		const hasDiscuss = conv.msgs.some(m => m.role === "user" && /^\/(?:discuss|replicate)\s/i.test(m.content));
+		if (hasDiscuss) {
+			extractAndStoreKg(conv.msgs).catch(() => { /* kg extraction is best-effort */ });
+		}
+
 		res.writeHead(201);
 		res.end(JSON.stringify({ ok: true, experiment, summary: summaryRec, newTitle: isDefault ? sr.title : null }));
 		return;
@@ -408,6 +415,22 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 		return;
 	}
 
+	// GET /api/graph?node=CEBPE&depth=2 — neighbourhood subgraph
+	if (path === "/api/graph" && method === "GET") {
+		const qs    = new URL(req.url ?? "", "http://x").searchParams;
+		const node  = qs.get("node") ?? "";
+		const depth = Math.min(parseInt(qs.get("depth") ?? "2", 10), 3);
+		if (!node) { res.writeHead(400); res.end('{"error":"node param required"}'); return; }
+		res.end(JSON.stringify(queryNeighbourhood(node, depth)));
+		return;
+	}
+
+	// GET /api/graph/stats — node and edge counts
+	if (path === "/api/graph/stats" && method === "GET") {
+		res.end(JSON.stringify(kgStats()));
+		return;
+	}
+
 	// GET /api/skills?status=active — list all skills
 	if (path === "/api/skills" && method === "GET") {
 		const qs = new URL(req.url ?? "", "http://x").searchParams;
@@ -463,6 +486,12 @@ export async function launchWebServer(options: PiRuntimeOptions, port = 3000): P
 	// DB lives in ~/.waddington/web.db (same dir as sessions/ and agent/)
 	const dbPath = resolve(options.feynmanAgentDir, "..", "web.db");
 	openDb(dbPath);
+
+	// Seed knowledge graph from existing ProtocolSpecs (idempotent upserts)
+	for (const slug of listProtocolSlugs()) {
+		const spec = loadProtocolSpec(slug);
+		if (spec) try { seedFromProtocol(spec); } catch { /* best-effort */ }
+	}
 
 	// Force RPC mode so Pi outputs structured JSONL instead of TUI escape codes.
 	const rpcOptions: PiRuntimeOptions = { ...options, mode: "rpc" };

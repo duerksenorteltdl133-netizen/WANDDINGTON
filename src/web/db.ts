@@ -58,6 +58,8 @@ export interface DbConvFull extends DbConv {
 
 let _db: Database.Database;
 
+export function getDb(): Database.Database { return _db; }
+
 export function openDb(dbPath: string): void {
 	mkdirSync(dirname(dbPath), { recursive: true });
 	_db = new Database(dbPath);
@@ -117,6 +119,29 @@ export function openDb(dbPath: string): void {
 	// Migrations for existing databases
 	try { _db.exec("ALTER TABLE experiments ADD COLUMN rfs_json TEXT"); } catch { /* already exists */ }
 	try { _db.exec("ALTER TABLE experiments ADD COLUMN failure_json TEXT"); } catch { /* already exists */ }
+
+	// Knowledge graph tables (H1, idempotent)
+	_db.exec(`
+		CREATE TABLE IF NOT EXISTS kg_nodes (
+			id         TEXT PRIMARY KEY,   -- e.g. "paper:gears-2024", "gene:CEBPE"
+			type       TEXT NOT NULL,      -- Paper | Model | Gene | Dataset | Metric | CellType
+			label      TEXT NOT NULL,      -- human-readable name
+			props_json TEXT NOT NULL DEFAULT '{}'  -- extra attributes as JSON
+		);
+		CREATE INDEX IF NOT EXISTS idx_kg_node_type  ON kg_nodes(type);
+		CREATE INDEX IF NOT EXISTS idx_kg_node_label ON kg_nodes(label);
+
+		CREATE TABLE IF NOT EXISTS kg_edges (
+			id       TEXT PRIMARY KEY,
+			src      TEXT NOT NULL REFERENCES kg_nodes(id) ON DELETE CASCADE,
+			rel      TEXT NOT NULL,   -- benchmarks_on | claims | evaluated_by | perturbed_in | uses_metric
+			dst      TEXT NOT NULL REFERENCES kg_nodes(id) ON DELETE CASCADE,
+			props_json TEXT NOT NULL DEFAULT '{}'
+		);
+		CREATE INDEX IF NOT EXISTS idx_kg_edge_src ON kg_edges(src);
+		CREATE INDEX IF NOT EXISTS idx_kg_edge_dst ON kg_edges(dst);
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_kg_edge_uniq ON kg_edges(src, rel, dst);
+	`);
 
 	// Hypotheses table (created in E2, idempotent)
 	_db.exec(`
