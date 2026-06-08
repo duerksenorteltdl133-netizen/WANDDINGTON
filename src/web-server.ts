@@ -12,12 +12,14 @@ import { patchPiRuntimeNodeModules } from "./pi/runtime-patches.js";
 import { ensureSupportedNodeVersion } from "./system/node-version.js";
 import { resolveAllExecutables } from "./system/executables.js";
 import { openDb, dbListConvs, dbCreateConv, dbUpdateConv, dbDeleteConv, dbUpsertMsg,
-         dbListExperiments, dbUpsertExperiment, dbDeleteExperiment,
+         dbListExperiments, dbUpsertExperiment, dbDeleteExperiment, dbUpdateExperimentRFS,
          dbUpsertSummary, dbListSummaries,
          dbIndexFts, dbFtsSearch, dbUpsertEmbedding, dbLoadEmbeddings } from "./web/db.js";
 import { extractExperiment, buildContextPrefix } from "./web/extract.js";
 import { generateSummary, buildSummaryContext } from "./web/summarize.js";
 import { embed, dotSim, vecToBlob, blobToVec, rrf, EMBED_DIMS } from "./web/embed.js";
+import { computeRFS } from "./web/rfs.js";
+import { loadProtocolSpec, listProtocolSlugs } from "./web/protocol.js";
 
 function readFrontendTemplate(appRoot: string): string {
 	const distPath = resolve(appRoot, "dist", "web", "index.html");
@@ -39,6 +41,24 @@ async function readBody(req: IncomingMessage): Promise<unknown> {
 }
 
 type JsonBody = Record<string, unknown>;
+
+// Find the best-matching ProtocolSpec for a given model+dataset combination.
+// Matches by slug/title containing the model name AND dataset name.
+function findMatchingProtocol(model: string | null, dataset: string | null) {
+	if (!model && !dataset) return null;
+	for (const slug of listProtocolSlugs()) {
+		const spec = loadProtocolSpec(slug);
+		if (!spec) continue;
+		const modelOk = !model ||
+			slug.toLowerCase().includes(model.toLowerCase()) ||
+			(spec.paper_title ?? "").toLowerCase().includes(model.toLowerCase());
+		const datasetOk = !dataset ||
+			spec.dataset.name.toLowerCase().includes(dataset.toLowerCase()) ||
+			dataset.toLowerCase().includes(spec.dataset.name.toLowerCase());
+		if (modelOk && datasetOk) return spec;
+	}
+	return null;
+}
 
 async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<void> {
 	const method = (req.method ?? "GET").toUpperCase();
@@ -112,6 +132,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 			dataset: extracted.dataset,
 			metrics: JSON.stringify(extracted.metrics),
 			notes:   null,
+			rfs_json: null,
 		});
 		res.writeHead(201);
 		res.end(JSON.stringify({ ok: true, experiment: exp }));
@@ -136,6 +157,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 				dataset: extracted.dataset,
 				metrics: JSON.stringify(extracted.metrics),
 				notes:   null,
+				rfs_json: null,
 			});
 		}
 
@@ -164,6 +186,15 @@ async function handleApi(req: IncomingMessage, res: ServerResponse): Promise<voi
 		embed(ftsBody.slice(0, 512)).then(vec => {
 			dbUpsertEmbedding(conv.id, vecToBlob(vec), EMBED_DIMS);
 		}).catch(() => { /* embedding is optional — ignore failures */ });
+
+		// Fire-and-forget: compute RFS if we have an experiment with metrics
+		if (experiment) {
+			const ourMetrics = JSON.parse(experiment.metrics || "{}") as Record<string, number>;
+			const spec = findMatchingProtocol(experiment.model, experiment.dataset);
+			computeRFS(spec, ourMetrics).then(rfsResult => {
+				dbUpdateExperimentRFS(experiment.id, JSON.stringify(rfsResult));
+			}).catch(() => { /* RFS is optional — ignore failures */ });
+		}
 
 		res.writeHead(201);
 		res.end(JSON.stringify({ ok: true, experiment, summary: summaryRec, newTitle: isDefault ? sr.title : null }));
