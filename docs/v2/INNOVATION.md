@@ -17,7 +17,7 @@
 | **G5 BenchmarkEval** | 对 BioDiscoveryAgent 数据集的评估 | ✅ 已完成 | `workspace/evaluation/benchmark.py` |
 | **G4 PhenotypeMapper** | 基因 → 表型反向查询 | ✅ 已完成 | `src/web/phenotype-mapper.ts` `workspace/evaluation/phenotype_mapper.py` |
 | **G1 GeneRanker** | 基因候选生成与排序 (Phase 1) | ✅ 已完成 | `src/web/gene-ranker.ts` `workspace/evaluation/gene_ranker.py` |
-| **G2 ExperimentPlanner** | 多轮实验规划 | 🔲 待实现 | `experiment-planner.ts` |
+| **G2 ExperimentPlanner** | 多轮实验规划 | ✅ 已完成 | `src/web/experiment-planner.ts` |
 
 ---
 
@@ -342,7 +342,7 @@ interface ExperimentPlan {
 | 3 | **G5 BenchmarkEval** | BioDiscoveryAgent 数据集（已克隆） | ✅ 完成（commit 0915823） |
 | 4 | **G1 GeneRanker Phase 1** | G3 + G4 + KG + SKILL + STRING PPI | ✅ 完成（commit 18fbdc4），IFNG 0.102 > BDA 0.096 |
 | 5 | `/api/gene-select` 端点 | G1 | ✅ 完成（同 G1 提交） |
-| 6 | **G2 ExperimentPlanner** | G1 | 🔲 待实现 |
+| 6 | **G2 ExperimentPlanner** | G1 | ✅ 完成（commit 3c09315） |
 | 7 | **G1 Phase 2（LightGBM）** | ≥ 20 条 RFS > 0.65 实验 | 🔲 待数据积累 |
 
 ---
