@@ -11,10 +11,12 @@
 
 ## 快速导航
 
-- **了解已实现的模块** → [v1/MODULES.md](v1/MODULES.md)
-- **了解 V1 创新点设计** → [v1/INNOVATION.md](v1/INNOVATION.md)
-- **了解 keypaper 分析** → [v1/GENE_SELECTION_STRATEGY.md](v1/GENE_SELECTION_STRATEGY.md)
-- **了解 V2 新方向** → [v2/INNOVATION.md](v2/INNOVATION.md)
+- **项目研究计划（总览）** → [WADDINGTON_PLAN.md](WADDINGTON_PLAN.md)
+- **V1 已实现模块详解** → [v1/MODULES.md](v1/MODULES.md)
+- **V1 创新点** → [v1/INNOVATION.md](v1/INNOVATION.md)
+- **keypaper 分析** → [v1/GENE_SELECTION_STRATEGY.md](v1/GENE_SELECTION_STRATEGY.md)
+- **V2 创新点 + 实测结果** → [v2/INNOVATION.md](v2/INNOVATION.md)
+- **V2 已实现模块详解** → [v2/MODULES.md](v2/MODULES.md)
 
 ## 版本升级逻辑
 
