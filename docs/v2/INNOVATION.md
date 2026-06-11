@@ -328,6 +328,14 @@ interface ExperimentPlan {
    | Carnevale22 | 0.028 | **0.044** | 0.043 |
    | Scharenberg22 | 0.109 | **0.265** | — |
    | 7数据集均值 | 0.046 | **0.107** | 0.128* |
+
+   **G1 Phase 2（LightGBM，BDA 数据引导）**：
+   | 数据集 | Phase 1 | Phase 2 | BDA (paper) |
+   |--------|---------|---------|-------------|
+   | IFNG | 0.102 | **0.175** | 0.096 |
+   | IL2 | 0.121 | **0.183** | 0.100 |
+   | Scharenberg22 | 0.265 | **0.612** | — |
+
    \* BDA 平均仅基于其报告的 4 个数据集且无 essential 过滤
 3. 引入 SKILL 库后，技术失败率在 N 轮后下降（可用 Leaderboard 数据验证）
 
@@ -343,7 +351,7 @@ interface ExperimentPlan {
 | 4 | **G1 GeneRanker Phase 1** | G3 + G4 + KG + SKILL + STRING PPI | ✅ 完成（commit 18fbdc4），IFNG 0.102 > BDA 0.096 |
 | 5 | `/api/gene-select` 端点 | G1 | ✅ 完成（同 G1 提交） |
 | 6 | **G2 ExperimentPlanner** | G1 | ✅ 完成（commit 3c09315） |
-| 7 | **G1 Phase 2（LightGBM）** | ≥ 20 条 RFS > 0.65 实验 | 🔲 待数据积累 |
+| 7 | **G1 Phase 2（LightGBM）** | BDA benchmark 数据引导 | ✅ 完成（commit 901aa1b），IFNG 0.175 > BDA 0.096 |
 
 ---
 
