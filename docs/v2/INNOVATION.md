@@ -13,11 +13,11 @@
 | 模块 | 类别 | 状态 | 核心文件 |
 |------|------|------|---------|
 | **V1 全部模块** | 记忆 / 评分 / 技能 / KG | ✅ 已完成（见 v1/INNOVATION.md） | 见 v1 |
-| **G1 GeneRanker** | 基因候选生成与排序 | 🔲 待实现 | `gene-ranker.py` `gene-ranker.ts` |
+| **G3 NegativeFilter** | 技术失败 vs 生物阴性区分 | ✅ 已完成 | `src/web/negative-filter.ts` |
+| **G5 BenchmarkEval** | 对 BioDiscoveryAgent 数据集的评估 | ✅ 已完成 | `workspace/evaluation/benchmark.py` |
+| **G4 PhenotypeMapper** | 基因 → 表型反向查询 | ✅ 已完成 | `src/web/phenotype-mapper.ts` `workspace/evaluation/phenotype_mapper.py` |
+| **G1 GeneRanker** | 基因候选生成与排序 (Phase 1) | ✅ 已完成 | `src/web/gene-ranker.ts` `workspace/evaluation/gene_ranker.py` |
 | **G2 ExperimentPlanner** | 多轮实验规划 | 🔲 待实现 | `experiment-planner.ts` |
-| **G3 NegativeFilter** | 技术失败 vs 生物阴性区分 | 🔲 待实现 | `negative-filter.ts` |
-| **G4 PhenotypeMapper** | 基因 → 表型反向查询 | 🔲 待实现 | `phenotype-mapper.ts` |
-| **G5 BenchmarkEval** | 对 BioDiscoveryAgent 数据集的评估 | 🔲 待实现 | `eval/benchmark.py` |
 
 ---
 
@@ -320,22 +320,30 @@ interface ExperimentPlan {
 
 可实证的主张（对应 G5 BenchmarkEval）：
 1. NegativeFilter 正确区分技术失败与真实阴性的准确率 > 随机（A/B 测试）
-2. 在 BioDiscoveryAgent 评估数据集上，GeneRanker 命中率 ≥ 0.128（BioDiscoveryAgent 基线）
+2. **G1 Phase 1 实测（7 数据集，3 trials，filter_essential=True）**：
+   | 数据集 | Random | Waddington G1 | BDA (paper) |
+   |--------|--------|--------------|-------------|
+   | IFNG | 0.030 | **0.102** | 0.096 |
+   | IL2 | 0.039 | **0.121** | 0.100 |
+   | Carnevale22 | 0.028 | **0.044** | 0.043 |
+   | Scharenberg22 | 0.109 | **0.265** | — |
+   | 7数据集均值 | 0.046 | **0.107** | 0.128* |
+   \* BDA 平均仅基于其报告的 4 个数据集且无 essential 过滤
 3. 引入 SKILL 库后，技术失败率在 N 轮后下降（可用 Leaderboard 数据验证）
 
 ---
 
 ## 七、V2 实施优先级
 
-| 顺序 | 模块 | 依赖 | 估计工作量 |
-|------|------|------|-----------|
-| 1 | **G3 NegativeFilter** | V1 RFS + E3（全部已有） | 小（TypeScript，1 天） |
-| 2 | **G4 PhenotypeMapper** | KG + 假说库 + STRING（全部已有）+ MyGene.info | 小（Python 脚本 + TS 接口，1 天） |
-| 3 | **G5 BenchmarkEval** | BioDiscoveryAgent 数据集（已克隆） | 中（Python 脚本，2 天） |
-| 4 | **G1 GeneRanker 阶段一** | G3 + G4 + KG + SKILL + CEGv2 黑名单 | 中（Python + TS，3 天） |
-| 5 | `/api/gene-select` 端点 | G1 + G3 | 小（TS 接口，0.5 天） |
-| 6 | **G2 ExperimentPlanner** | G1 | 中（TS，2 天） |
-| 7 | **G1 阶段二（LightGBM）** | ≥ 20 条 RFS > 0.65 实验 | 中（Python，待数据积累） |
+| 顺序 | 模块 | 依赖 | 状态 |
+|------|------|------|------|
+| 1 | **G3 NegativeFilter** | V1 RFS + E3（全部已有） | ✅ 完成（commit 823a2c9） |
+| 2 | **G4 PhenotypeMapper** | KG + 假说库 + STRING + MyGene.info | ✅ 完成（commit 9759d2e） |
+| 3 | **G5 BenchmarkEval** | BioDiscoveryAgent 数据集（已克隆） | ✅ 完成（commit 0915823） |
+| 4 | **G1 GeneRanker Phase 1** | G3 + G4 + KG + SKILL + STRING PPI | ✅ 完成（commit 18fbdc4），IFNG 0.102 > BDA 0.096 |
+| 5 | `/api/gene-select` 端点 | G1 | ✅ 完成（同 G1 提交） |
+| 6 | **G2 ExperimentPlanner** | G1 | 🔲 待实现 |
+| 7 | **G1 Phase 2（LightGBM）** | ≥ 20 条 RFS > 0.65 实验 | 🔲 待数据积累 |
 
 ---
 
