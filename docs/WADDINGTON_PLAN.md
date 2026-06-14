@@ -1,6 +1,6 @@
 # Waddington — 项目研究计划
 
-> 最后更新：2026-06-11（V2 全部模块完成后）
+> 最后更新：2026-06-14（G1 ARCHS4 特征扩展 + /suggest-genes 命令完成）
 >
 > 本文件记录项目的研究定位、已完成工作、和后续方向。
 
@@ -42,10 +42,12 @@ Waddington 是一个用于**序贯基因扰动实验设计**的 Agent。核心�
 | G4 PhenotypeMapper | 基因 → KEGG/Reactome/STRING/KG/假说 | ✅ |
 | G5 BenchmarkEval | 7 数据集评估框架，对标 BDA | ✅ |
 | G1 Phase 1 | 生物锚点 + STRING PPI 扩展（规则，零 LLM） | ✅ |
-| G1 Phase 2 | LightGBM（BDA 数据引导）| ✅ |
+| G1 Phase 2 | LightGBM + ARCHS4 共表达（4 特征，BDA 数据引导）| ✅ |
 | G2 ExperimentPlanner | 多轮预算分配 + SKILL 优先 + 重试机制 | ✅ |
+| /suggest-genes | G1→G2 对话命令（CLI + Web Chat）| ✅ |
+| Coreset baseline | k-center 贪心 A-arm（G5 对照臂）| ✅ |
 
-详见 [docs/v2/MODULES.md](v2/MODULES.md) 和 [docs/v2/INNOVATION.md](v2/INNOVATION.md)。
+详见 [docs/v2/MODULES.md](v2/MODULES.md)、[docs/v2/INNOVATION.md](v2/INNOVATION.md) 和 [docs/v1+v2/SUMMARY.md](v1+v2/SUMMARY.md)。
 
 ---
 
@@ -60,9 +62,12 @@ Waddington 是一个用于**序贯基因扰动实验设计**的 Agent。核心�
 | BioDiscoveryAgent | 0.096 | 0.100 | ✗ | ✗ | 每轮均有 |
 | PerTurboAgent | ~0.44（11表型均值）| — | ✗ | 单轮内 | 每轮均有 |
 | **Waddington Phase 1** | **0.102** | **0.121** | **✓** | **✓** | **零** |
-| **Waddington Phase 2** | **0.175** | **0.183** | **✓** | **✓** | **零** |
+| **Waddington Phase 2**（3特征） | **0.175** | **0.183** | **✓** | **✓** | **零** |
+| **Waddington Phase 2**（+ARCHS4，4特征） | **0.233** | **0.218** | **✓** | **✓** | **零** |
 
-**核心 claim**：Waddington 在命中率上匹配或超过 LLM-based agent，同时具备这些方法没有的"实验质量感知"能力，且无需每轮 LLM 调用。
+7 数据集均值：Random 0.046 → BDA 0.128 → Coreset 0.145 → Phase 2（3特征）0.201 → **Phase 2（4特征）0.264**。
+
+**核心 claim**：Waddington 在命中率上显著超过 LLM-based agent（IFNG +143% vs BDA），同时具备这些方法没有的"实验质量感知"能力，且无需每轮 LLM 调用。
 
 ---
 
@@ -127,16 +132,16 @@ Waddington 是一个用于**序贯基因扰动实验设计**的 Agent。核心�
 
 ### 近期（可实现，不依赖更多数据）
 
-**6.1 对话命令 `/suggest-genes`**
-把 G1→G2 串入对话流：用户说"帮我规划 IFNG 实验，预算 200 基因，4 轮"，系统自动调用链路返回实验计划。目前端点已存在，缺的是对话命令入口。
+**6.1 对话命令 `/suggest-genes`** ✅ 已完成
+把 G1→G2 串入对话流：`node bin/waddington.js suggest-genes IFNG --budget 200 --rounds 4`，Web Chat 中也可直接输入 `/suggest-genes IFNG --budget 200`。
 
 **6.2 接入 Replogle 2022 大规模数据集**
 作为更严格的 benchmark，且基因数（9,867）更接近真实 CRISPR 全基因组筛选规模。
 
-**6.3 G1 LightGBM 特征扩展**
-当前仅 3 个特征（g1_ppi_score、hub_score_norm、is_essential）。加入：
-- ARCHS4 共表达特征（`gget archs4 <gene>`，waddington-bio 环境已有 gget）
-- STRING 网络中心度（度中心性、betweenness）
+**6.3 G1 LightGBM 特征扩展** ✅ 已完成（ARCHS4）
+ARCHS4 共表达已作为第 4 特征加入，feature importance=3608（接近 ppi_score 的 3941），均值命中率 +31%。
+待考虑的后续扩展：
+- `is_essential` 替换（importance=0，可换 STRING 度中心性）
 - 通路成员资格独热编码（KEGG）
 
 ### 中期（需要积累真实实验数据）
