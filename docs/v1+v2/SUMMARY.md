@@ -335,8 +335,21 @@ conda run -n waddington-bio python3 workspace/evaluation/results_summary.py
 **9.2 接入 Replogle 2022 K562 Essential 数据集** ✅ 已完成  
 接入 Replogle et al. 2022 K562 CRISPRi essential 子集（623 基因，63 hits）。In-sample hit_ratio=1.000，LOO AUC=0.564；8DS 均值 0.451。完整全基因组版本（9,867 基因，Figshare）可作为后续更严格 benchmark。
 
-**9.3 G3 NegativeFilter 定量评估**  
-目前 G3 逻辑完整但缺定量验证。可在 benchmark 框架内模拟技术失败（人工扭曲 5% 条目的 RFS 分），测量 `false_negative_recovery` 指标。
+**9.3 G3 NegativeFilter 定量评估** ✅ 已完成  
+在 4 个数据集（IFNG/IL2/Sanchez21/Steinhart）各采样 300 基因，注入 3 种技术失败信号（协议偏离/差异模式/E3 环境失败），多轮质量实验模拟真实阴性确认。
+
+**评估结果（4 数据集一致）**：
+| 指标 | With G3 | Without G3（朴素基线）|
+|------|---------|---------------------|
+| TF Recovery（真实 hit 被技术失败吞噬后的救回率） | **100%** | 0%（全部被拉黑）|
+| False Blacklist（真实 hit 被错误永久排除） | **0%** | 100%（灾难性）|
+| TN Precision（2-3 轮质量实验后正确识别真实阴性） | **100%** | N/A |
+| False Save（非 hit 的 TF 信号导致的无效重试） | 100% | 0%（朴素系统不重试）|
+
+**关键发现（边界行为）**：
+- `overall RFS ∈ [0.40, 0.65]` 为灰区：G3 既不触发 TF 路径（需 overall<0.40），也不达到质量阈值（需 overall≥0.65），默认 `needs_investigation` — 设计上的保守主义
+- G3 的代价：非 hit 遭遇 TF 信号时会被错误重试（False Save = 100%），即保守换取零遗漏
+- 实现文件：`workspace/evaluation/eval_g3.py`（可复现，独立运行）
 
 ### 中期（需积累真实实验数据）
 
