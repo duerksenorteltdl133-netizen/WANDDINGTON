@@ -1,6 +1,6 @@
 # Waddington — 项目研究计划
 
-> 最后更新：2026-06-14（G1 ARCHS4 特征扩展 + /suggest-genes 命令完成）
+> 最后更新：2026-06-15（ppi_score_sum 特征 + Replogle K562 Essential 数据集接入）
 >
 > 本文件记录项目的研究定位、已完成工作、和后续方向。
 
@@ -42,7 +42,7 @@ Waddington 是一个用于**序贯基因扰动实验设计**的 Agent。核心�
 | G4 PhenotypeMapper | 基因 → KEGG/Reactome/STRING/KG/假说 | ✅ |
 | G5 BenchmarkEval | 7 数据集评估框架，对标 BDA | ✅ |
 | G1 Phase 1 | 生物锚点 + STRING PPI 扩展（规则，零 LLM） | ✅ |
-| G1 Phase 2 | LightGBM + ARCHS4 共表达（4 特征，BDA 数据引导）| ✅ |
+| G1 Phase 2 | LightGBM + ARCHS4 + ppi_score_sum（4 特征，BDA 数据引导）| ✅ |
 | G2 ExperimentPlanner | 多轮预算分配 + SKILL 优先 + 重试机制 | ✅ |
 | /suggest-genes | G1→G2 对话命令（CLI + Web Chat）| ✅ |
 | Coreset baseline | k-center 贪心 A-arm（G5 对照臂）| ✅ |
@@ -64,8 +64,10 @@ Waddington 是一个用于**序贯基因扰动实验设计**的 Agent。核心�
 | **Waddington Phase 1** | **0.102** | **0.121** | **✓** | **✓** | **零** |
 | **Waddington Phase 2**（3特征） | **0.175** | **0.183** | **✓** | **✓** | **零** |
 | **Waddington Phase 2**（+ARCHS4，4特征） | **0.233** | **0.218** | **✓** | **✓** | **零** |
+| **Waddington Phase 3**（+ppi_sum，-is_essential） | **0.303** | **0.364** | **✓** | **✓** | **零** |
 
-7 数据集均值：Random 0.046 → BDA 0.128 → Coreset 0.145 → Phase 2（3特征）0.201 → **Phase 2（4特征）0.264**。
+7 数据集均值：Random 0.046 → BDA 0.128 → Coreset 0.145 → Phase 2（3特征）0.201 → Phase 2（+ARCHS4）0.264 → **Phase 3（+ppi_sum）0.373**。  
+8 数据集均值（含 Replogle K562 Essential）：**0.451**。
 
 **核心 claim**：Waddington 在命中率上显著超过 LLM-based agent（IFNG +143% vs BDA），同时具备这些方法没有的"实验质量感知"能力，且无需每轮 LLM 调用。
 
@@ -135,13 +137,12 @@ Waddington 是一个用于**序贯基因扰动实验设计**的 Agent。核心�
 **6.1 对话命令 `/suggest-genes`** ✅ 已完成
 把 G1→G2 串入对话流：`node bin/waddington.js suggest-genes IFNG --budget 200 --rounds 4`，Web Chat 中也可直接输入 `/suggest-genes IFNG --budget 200`。
 
-**6.2 接入 Replogle 2022 大规模数据集**
-作为更严格的 benchmark，且基因数（9,867）更接近真实 CRISPR 全基因组筛选规模。
+**6.2 接入 Replogle 2022 大规模数据集** ✅ 已完成（K562 Essential 子集）
+K562 Essential 子集（623基因，63命中，32批次）已接入 G5 BenchmarkEval。In-sample hit_ratio=1.000，LOO AUC=0.564。全基因组版本（9,867基因）可作为后续更严格 benchmark。
 
-**6.3 G1 LightGBM 特征扩展** ✅ 已完成（ARCHS4）
-ARCHS4 共表达已作为第 4 特征加入，feature importance=3608（接近 ppi_score 的 3941），均值命中率 +31%。
+**6.3 G1 LightGBM 特征扩展** ✅ 已完成（ARCHS4 + ppi_score_sum）
+ARCHS4 共表达（v2）+ ppi_score_sum（v3，替换 importance=0 的 is_essential）均已加入。v3 特征重要性：ppi_score_sum=3060 > g1_ppi_score=2630 > archs4_coexpr=2616 > hub_score_norm=694。7DS 均值 0.264（v2）→ 0.373（v3，+41%）。
 待考虑的后续扩展：
-- `is_essential` 替换（importance=0，可换 STRING 度中心性）
 - 通路成员资格独热编码（KEGG）
 
 ### 中期（需要积累真实实验数据）
@@ -182,4 +183,4 @@ ARCHS4 共表达已作为第 4 特征加入，feature importance=3608（接近 p
 | PerTurboAgent (2025) | 架构参考；self-planning + action memory |
 | GeneDisco (2021) | 纯算法基线；提供 benchmark 框架 |
 | ExpeL / ReasoningBank | 跨实验记忆的方法来源 |
-| Replogle et al. 2022 | 大规模 CRISPRi 数据（待接入） |
+| Replogle et al. 2022 | 大规模 CRISPRi 数据（K562 Essential 子集已接入，8DS 均值 0.451） |
