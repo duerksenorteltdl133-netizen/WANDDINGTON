@@ -196,14 +196,17 @@ node bin/waddington.js suggest-genes IFNG --budget 200 --rounds 4 --batch 50
 
 ### 4.1 主结果表（hit_ratio@Round5 均值）
 
-| 方法 | IFNG | IL2 | Sanchez21 | San_down | Carnevale22 | Scharenberg22 | Steinhart | Replogle | **7DS 均值** | **8DS 均值** |
-|------|------|-----|-----------|----------|-------------|--------------|-----------|---------|------------|------------|
-| Random（论文） | 0.037 | 0.031 | — | — | 0.036 | — | — | — | ~0.046 | — |
-| BDA（论文） | 0.096 | 0.100 | — | — | 0.043 | — | — | — | ~0.128 | — |
-| Coreset（k-center） | 0.110 | 0.158 | 0.040 | 0.059 | 0.046 | 0.490 | 0.110 | — | 0.145 | — |
-| **Waddington v1**（3-feat） | **0.175** | **0.183** | **0.084** | **0.110** | **0.091** | **0.612** | **0.152** | — | **0.201** | — |
-| **Waddington v2**（+ARCHS4） | **0.233** | **0.218** | **0.151** | **0.179** | **0.146** | **0.735** | **0.186** | — | **0.264** | — |
-| **Waddington v3**（+ppi_sum） | **0.303** | **0.364** | **0.207** | **0.240** | **0.200** | **1.000** | **0.297** | **1.000** | **0.373** | **0.451** |
+| 方法 | IFNG | IL2 | Sanchez21 | San_down | Carnevale22 | Scharenberg22 | Steinhart | R_essential | R_gwps | **7DS** | **9DS** |
+|------|------|-----|-----------|----------|-------------|--------------|-----------|------------|--------|---------|---------|
+| Random（论文） | 0.037 | 0.031 | — | — | 0.036 | — | — | — | — | ~0.046 | — |
+| BDA（论文） | 0.096 | 0.100 | — | — | 0.043 | — | — | — | — | ~0.128 | — |
+| Coreset（k-center） | 0.110 | 0.158 | 0.040 | 0.059 | 0.046 | 0.490 | 0.110 | — | — | 0.145 | — |
+| **Waddington v1**（3-feat） | **0.175** | **0.183** | **0.084** | **0.110** | **0.091** | **0.612** | **0.152** | — | — | **0.201** | — |
+| **Waddington v2**（+ARCHS4） | **0.233** | **0.218** | **0.151** | **0.179** | **0.146** | **0.735** | **0.186** | — | — | **0.264** | — |
+| **Waddington v3**（+ppi_sum） | **0.305** | **0.393** | **0.212** | **0.240** | **0.207** | **1.000** | **0.317** | **1.000** | **0.373** | **0.382** | **0.450** |
+
+> R_essential = Replogle_K562_essential（623 基因），R_gwps = Replogle_K562_gwps（9193 基因）  
+> 7DS 均值：原始 7 个 BDA 数据集；9DS 均值：含两个 Replogle 子集
 
 ### 4.2 Scramble Ablation（信号来源验证）
 
@@ -216,12 +219,12 @@ node bin/waddington.js suggest-genes IFNG --budget 200 --rounds 4 --batch 50
 
 ### 4.3 关键对比结论
 
-- **Waddington v3 vs BDA**：IFNG +216%，IL2 +264%，且无需每轮 LLM 调用
-- **Waddington v3 vs Coreset**：+157%，LightGBM+生物先验+网络特征优势明显
-- **ARCHS4 增益（v1→v2）**：均值 0.201 → 0.264（+31%）
-- **ppi_sum 增益（v2→v3，7DS）**：均值 0.264 → 0.373（+41%），ppi_score_sum importance=3060（最高）
-- **Replogle 接入（v3, 8DS）**：均值 0.451，Replogle in-sample hit_ratio=1.000，LOO AUC=0.564
-- **特征消融**：`ppi_score_sum` importance=3060 > `g1_ppi_score`=2630 > `archs4_coexpr`=2616 > `hub_score_norm`=694
+- **Waddington v3 vs BDA**：IFNG +218%，IL2 +293%，无需每轮 LLM 调用
+- **Waddington v3 vs Coreset（7DS）**：+163%，LightGBM+生物先验+网络特征优势明显
+- **ARCHS4 增益（v1→v2）**：7DS 均值 0.201 → 0.264（+31%）
+- **ppi_sum 增益（v2→v3，7DS）**：0.264 → 0.382（+45%），ppi_score_sum importance=3173（最高）
+- **Replogle 接入（v3, 9DS）**：9DS 均值 0.450；GWPS in-sample 0.373（9193 基因，真实全基因组规模）
+- **特征重要性（cross-dataset）**：`ppi_score_sum`=3173 > `g1_ppi_score`=2676 > `archs4_coexpr`=2333 > `hub_score_norm`=818
 
 ---
 
@@ -235,7 +238,7 @@ node bin/waddington.js suggest-genes IFNG --budget 200 --rounds 4 --batch 50
 | 跨实验经验记忆 | ✗ | ✗ | 单轮内 | **✓（SKILL + KG + 假说库 + 黑名单）** |
 | 代码执行闭环 | ✗ | ✗ | ✗ | **✓（/perturb + RFS 评分）** |
 | LLM 成本（每轮） | 无 | 有 | 有 | **零（G1-G5 全程无 LLM 调用）** |
-| hit_ratio@R5 均值 | 未报告 | ~0.128 | ~0.44（11表型） | **0.373（7DS）/ 0.451（8DS含Replogle）** |
+| hit_ratio@R5 均值 | 未报告 | ~0.128 | ~0.44（11表型） | **0.382（7DS）/ 0.450（9DS含Replogle×2）** |
 
 > PerTurboAgent 的 0.44 基于 11 个私有表型数据集，方法论不同，不直接可比。
 

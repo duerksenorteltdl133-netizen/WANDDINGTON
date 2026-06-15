@@ -64,10 +64,10 @@ Waddington 是一个用于**序贯基因扰动实验设计**的 Agent。核心�
 | **Waddington Phase 1** | **0.102** | **0.121** | **✓** | **✓** | **零** |
 | **Waddington Phase 2**（3特征） | **0.175** | **0.183** | **✓** | **✓** | **零** |
 | **Waddington Phase 2**（+ARCHS4，4特征） | **0.233** | **0.218** | **✓** | **✓** | **零** |
-| **Waddington Phase 3**（+ppi_sum，-is_essential） | **0.303** | **0.364** | **✓** | **✓** | **零** |
+| **Waddington Phase 3**（+ppi_sum，-is_essential） | **0.305** | **0.393** | **✓** | **✓** | **零** |
 
-7 数据集均值：Random 0.046 → BDA 0.128 → Coreset 0.145 → Phase 2（3特征）0.201 → Phase 2（+ARCHS4）0.264 → **Phase 3（+ppi_sum）0.373**。  
-8 数据集均值（含 Replogle K562 Essential）：**0.451**。
+7 数据集均值：Random 0.046 → BDA 0.128 → Coreset 0.145 → Phase 2（3特征）0.201 → Phase 2（+ARCHS4）0.264 → **Phase 3（+ppi_sum）0.382**。  
+9 数据集均值（含 Replogle Essential + GWPS）：**0.450**。
 
 **核心 claim**：Waddington 在命中率上显著超过 LLM-based agent（IFNG +143% vs BDA），同时具备这些方法没有的"实验质量感知"能力，且无需每轮 LLM 调用。
 
