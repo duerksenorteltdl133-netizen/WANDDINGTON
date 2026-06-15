@@ -49,6 +49,19 @@ Waddington 是一个用于**序贯基因扰动实验设计**的 Agent。核心�
 
 详见 [docs/v2/MODULES.md](v2/MODULES.md)、[docs/v2/INNOVATION.md](v2/INNOVATION.md) 和 [docs/v1+v2/SUMMARY.md](v1+v2/SUMMARY.md)。
 
+### V3（2026-06-15）：特征深化 + 数据集扩展 + G3 定量评估
+
+| 模块 | 功能 | 状态 |
+|------|------|------|
+| ppi_score_sum 特征 | 替换 importance=0 的 is_essential，7DS avg +45% | ✅ |
+| 训练-推断一致性 fix | hub/ppi_sum 在全 PPI 预取后计算，消除特征分布偏移 | ✅ |
+| Replogle K562 Essential | 623 基因，63 命中，L2 距离命中定义 | ✅ |
+| Replogle K562 GWPS | 9193 基因，924 命中，AD counts 命中定义 | ✅ |
+| G3 NegativeFilter 评估 | 定量验证：TF 救回 100%，误拉黑 0%，灰区发现 | ✅ |
+| 数据目录统一 | `workspace/data/` 统一管理，symlink 组织 | ✅ |
+
+详见 [docs/v3/SUMMARY.md](v3/SUMMARY.md)。
+
 ---
 
 ## 2. 与对标方法的对比
@@ -132,37 +145,33 @@ Waddington 是一个用于**序贯基因扰动实验设计**的 Agent。核心�
 
 按优先级排列：
 
-### 近期（可实现，不依赖更多数据）
+### V1/V2 阶段目标（全部完成）
 
-**6.1 对话命令 `/suggest-genes`** ✅ 已完成
-把 G1→G2 串入对话流：`node bin/waddington.js suggest-genes IFNG --budget 200 --rounds 4`，Web Chat 中也可直接输入 `/suggest-genes IFNG --budget 200`。
+**6.1 对话命令 `/suggest-genes`** ✅
+**6.2 接入 Replogle 2022 数据集** ✅（Essential 623基因 + GWPS 9193基因，见 V3）
+**6.3 G1 LightGBM 特征扩展** ✅（ARCHS4 + ppi_score_sum，见 V3）
 
-**6.2 接入 Replogle 2022 大规模数据集** ✅ 已完成（K562 Essential 子集）
-K562 Essential 子集（623基因，63命中，32批次）已接入 G5 BenchmarkEval。In-sample hit_ratio=1.000，LOO AUC=0.564。全基因组版本（9,867基因）可作为后续更严格 benchmark。
+### V3 阶段目标（全部完成）
 
-**6.3 G1 LightGBM 特征扩展** ✅ 已完成（ARCHS4 + ppi_score_sum）
-ARCHS4 共表达（v2）+ ppi_score_sum（v3，替换 importance=0 的 is_essential）均已加入。v3 特征重要性：ppi_score_sum=3060 > g1_ppi_score=2630 > archs4_coexpr=2616 > hub_score_norm=694。7DS 均值 0.264（v2）→ 0.373（v3，+41%）。
-待考虑的后续扩展：
-- 通路成员资格独热编码（KEGG）
+**9.1 `is_essential` 特征替换** ✅ → ppi_score_sum，7DS +45%
+**9.2 Replogle K562 接入** ✅ → Essential + GWPS，9DS avg 0.450
+**9.3 G3 NegativeFilter 定量评估** ✅ → TF 救回 100%，误拉黑 0%
 
-### 中期（需要积累真实实验数据）
+### V4 方向（可立即推进）
 
-**6.4 真实实验数据微调 Phase 2 模型**
-当 Waddington DB 积累 ≥20 条 `RFS > 0.65` 的高质量实验后，运行 `bootstrap_lgbm.py` 用真实标签重训，模型收敛到当前研究场景。
+**10.1 KEGG 通路特征**
+独热编码候选基因与锚点基因的 KEGG 通路重叠度。预期改善 Sanchez21/Steinhart（非 T 细胞数据集，TCR PPI 信号弱）。
 
-**6.5 三臂消融实验**
-| 臂 | 配置 | 目的 |
-|----|------|------|
-| A | 纯 Random / 纯规则（G1 Phase 1 无 LightGBM） | 基线 |
-| B | G1+G2，但无 G3 质量过滤 | 验证 G3 价值 |
-| C | 完整 Waddington V2 | 主张 |
+**10.2 顺序仿真 benchmark**
+当前 benchmark 是静态排序（一次排名，5 轮固定选择）。改为真实顺序仿真：每轮选 batch → oracle 揭示 → 更新模型 → 下轮排名。测量 hit curve 早期轮次的动态提升。
 
-可在 G5 BenchmarkEval 框架内直接实现，已有所需基础设施。
+**10.3 LOO 泛化提升**
+当前 IFNG LOO AUC=0.577，GWPS LOO AUC=0.563，仍有较大空间。方向：接入 DepMap CRISPR 数据扩充训练集，或 per-dataset 特征归一化消除分布偏移。
 
-### 长期
+### 依赖真实实验数据（暂缓）
 
-**6.6 跨表型迁移学习**
-当积累多个表型的实验数据后，测试 Waddington 的"跨实验经验记忆"是否确实加速新表型的冷启动（hit curve 的前 1-2 轮是否明显优于无记忆版本）。
+**9.4 真实数据微调**：≥20 条 RFS > 0.65 实验后，用真实标签重训 LightGBM。
+**9.5 跨表型迁移验证**：验证 SKILL+KG+假说库是否加速新表型冷启动。
 
 ---
 
@@ -183,4 +192,4 @@ ARCHS4 共表达（v2）+ ppi_score_sum（v3，替换 importance=0 的 is_essent
 | PerTurboAgent (2025) | 架构参考；self-planning + action memory |
 | GeneDisco (2021) | 纯算法基线；提供 benchmark 框架 |
 | ExpeL / ReasoningBank | 跨实验记忆的方法来源 |
-| Replogle et al. 2022 | 大规模 CRISPRi 数据（K562 Essential 子集已接入，8DS 均值 0.451） |
+| Replogle et al. 2022 | 大规模 CRISPRi 数据（Essential + GWPS 均已接入，9DS 均值 0.450）|
