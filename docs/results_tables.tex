@@ -54,10 +54,9 @@ K562-GWPS       & Genome-wide fitness screen (K562)      & KO   &  9{,}193 & 924
 \centering
 \caption{%
   Hit ratio at round 5 across all nine benchmark datasets.
-  Random, LOO-LightGBM (static), and OnlineAdaptive are reported over 3 seeds;
-  all other methods use 5 seeds.
+  All methods are reported over 5 seeds.
   \textbf{Bold} = best per row; \underline{underline} = second best.
-  Waddington is our proposed method (C-arm).
+  Waddington is our proposed method (C-arm), using DeLM-verified cross-experiment memory.
 }
 \label{tab:main}
 \setlength{\tabcolsep}{4.5pt}
@@ -71,27 +70,29 @@ Dataset
   & B: LLM
   & C: Waddington \\
 \midrule
-IFN-$\gamma$   & 0.029 & 0.168 & \second{0.183} & 0.100 & 0.162 & \best{0.193} \\
-IL-2           & 0.031 & 0.306 & \second{0.314} & 0.139 & 0.265 & \best{0.343} \\
-Sanchez21 (up) & 0.037 & 0.077 & \second{0.087} & 0.031 & 0.064 & \best{0.091} \\
-Sanchez21 (dn) & 0.029 & 0.091 & \best{0.101}   & 0.078 & 0.068 & \second{0.096} \\
-Carnevale22    & 0.024 & 0.048 & 0.047          & \second{0.054} & 0.057 & \best{0.057} \\
-Scharenberg22  & 0.102 & \second{0.449} & \second{0.449} & 0.286 & \best{0.461} & 0.441 \\
-Steinhart      & 0.021 & 0.076 & 0.090          & 0.090 & \best{0.154} & \second{0.149} \\
-K562-Essential & 0.254 & \second{0.492} & 0.476  & 0.270 & 0.527 & \best{0.575} \\
-K562-GWPS      & 0.065 & 0.247 & 0.273          & 0.156 & 0.219 & \best{0.339} \\
+IFN-$\gamma$   & 0.029 & 0.168 & \second{0.183} & 0.100 & 0.160 & \best{0.190} \\
+IL-2           & 0.031 & 0.306 & \second{0.314} & 0.139 & 0.257 & \best{0.347} \\
+Sanchez21 (up) & 0.037 & 0.077 & \second{0.087} & 0.031 & 0.063 & \best{0.087} \\
+Sanchez21 (dn) & 0.029 & 0.091 & \best{0.101}   & 0.078 & 0.071 & \second{0.099} \\
+Carnevale22    & 0.024 & 0.048 & 0.047          & 0.054 & \best{0.059} & \second{0.056} \\
+Scharenberg22  & 0.102 & 0.449 & 0.449          & 0.286 & \best{0.478} & \second{0.465} \\
+Steinhart      & 0.021 & 0.076 & 0.090          & 0.090 & \second{0.152} & \best{0.159} \\
+K562-Essential & 0.254 & 0.492 & 0.476          & 0.270 & \best{0.559} & \second{0.556} \\
+K562-GWPS      & 0.065 & 0.247 & \second{0.273} & 0.156 & 0.225 & \best{0.347} \\
 \midrule
-\textbf{Average} & 0.066 & 0.217 & 0.224        & 0.134 & 0.220 & \best{0.254} \\
+\textbf{Average} & 0.066 & 0.217 & 0.224        & 0.134 & \second{0.225} & \best{0.256} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Waddington (C) achieves the best average hit ratio (0.254), outperforming the pure-LLM baseline B
-by 15.5\% relative (+0.034) and the algorithmic baseline A by 89.6\% (+0.120).
-It surpasses or matches every method on 7 of 9 datasets; the two exceptions are Scharenberg22 and Steinhart,
-where B (LLMReasoning) benefits from narrow, well-characterised biological priors.
+Waddington (C) achieves the best average hit ratio (0.256), outperforming the pure-LLM baseline B
+by 13.7\% relative (+0.031) and the algorithmic baseline A by 91.6\% (+0.122).
+It surpasses or matches every other method on 5 of 9 datasets; on the remaining four
+(Sanchez21-dn, Carnevale22, Scharenberg22, K562-Essential) it is a close runner-up,
+trailing the leader by at most 0.013, as either OnlineAdaptive or B (LLMReasoning)
+narrowly benefits from a strong ML signal or a narrow, well-characterised biological prior.
 Notably, Waddington strongly exceeds OnlineAdaptive (the PerTurboAgent-style ML-only method)
-on K562-GWPS (+0.066) and IFN-$\gamma$ (+0.010),
+on K562-GWPS (+0.075) and IFN-$\gamma$ (+0.007),
 demonstrating the value of combining online ML with LLM reasoning.
 
 % ─────────────────────────────────────────────────────────────────────────────
@@ -100,31 +101,30 @@ demonstrating the value of combining online ML with LLM reasoning.
 \begin{table}[ht]
 \centering
 \caption{%
-  Stepwise improvement in average hit ratio at round 5 (9 datasets).
+  Stepwise improvement in average hit ratio at round 5 (9 datasets, 5 seeds).
   Each row introduces one additional component over the previous configuration.
-  $\dagger$~3-seed estimates; all others 5 seeds.
 }
 \label{tab:progression}
 \begin{tabular}{llcc}
 \toprule
 Configuration & Key addition & avg hit@R5 & $\Delta$ \\
 \midrule
-Random$^\dagger$                    & —                              & 0.066 & — \\
+Random                              & —                              & 0.066 & — \\
 Coreset (A)                         & Diversity-maximising selection  & 0.134 & +0.068 \\
-LOO-LightGBM (static)$^\dagger$     & Cross-expt.\ ML prior           & 0.217 & +0.083 \\
-OnlineAdaptive$^\dagger$            & In-expt.\ ML retraining         & 0.224 & +0.007 \\
-LLM Reasoning (B)                   & LLM biological prior (no ML)    & 0.220 & (\textit{parallel branch}) \\
-C\,$-$\,ML (static LOO\,+\,LLM)    & Combine LOO prior with LLM      & 0.243 & +0.019 vs.\ B \\
-\textbf{Waddington (C, ours)}       & Add online ML retraining        & \textbf{0.254} & +0.011 \\
+LOO-LightGBM (static)               & Cross-expt.\ ML prior           & 0.217 & +0.083 \\
+OnlineAdaptive                      & In-expt.\ ML retraining         & 0.224 & +0.007 \\
+LLM Reasoning (B)                   & LLM biological prior (no ML)    & 0.225 & (\textit{parallel branch}) \\
+C\,$-$\,ML (static LOO\,+\,LLM)    & Combine LOO prior with LLM      & 0.247 & +0.022 vs.\ B \\
+\textbf{Waddington (C, ours)}       & Add online ML retraining        & \textbf{0.256} & +0.009 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 Each component provides an additive gain: the cross-experiment LOO prior (+0.083) contributes most,
-followed by the LLM biological prior (+0.019 when combined with the LOO prior),
-and online ML retraining (+0.011).
+followed by the LLM biological prior (+0.022 when combined with the LOO prior),
+and online ML retraining (+0.009).
 Cross-experiment memory contributes $\approx$0 in this leave-one-out benchmark
-(see ablation in Table~\ref{tab:ablation}),
+(in fact marginally negative, $-0.004$; see ablation in Table~\ref{tab:ablation}),
 as the LLM's parametric knowledge already subsumes the explicit memory entries.
 
 % ─────────────────────────────────────────────────────────────────────────────
@@ -148,48 +148,52 @@ as the LLM's parametric knowledge already subsumes the explicit memory entries.
 \toprule
 Dataset & C & C\,$-$\,Mem & C\,$-$\,LLM & C\,$-$\,ML & Shuffled & $\Delta_{\min}$ \\
 \midrule
-IFN-$\gamma$   & \best{0.193} & 0.189 & 0.190 & 0.179 & 0.175 & \drop{$-$0.018} \\
-IL-2           & 0.343 & 0.346 & 0.349 & \best{0.355} & 0.351 & $-$0.000 \\
-Sanchez21 (up) & \best{0.091} & 0.091 & 0.098 & 0.077 & 0.080 & \drop{$-$0.014} \\
-Sanchez21 (dn) & \best{0.096} & 0.097 & 0.093 & 0.093 & 0.092 & $-$0.003 \\
-Carnevale22    & 0.057 & 0.059 & 0.051 & \best{0.064} & 0.059 & $-$0.006 \\
-Scharenberg22  & 0.441 & 0.478 & \best{0.592} & 0.433 & 0.551 & $+$0.151 \\
-Steinhart      & \best{0.149} & 0.156 & 0.090 & 0.149 & \drop{0.076} & \drop{$-$0.073} \\
-K562-Essential & \best{0.575} & 0.559 & 0.476 & 0.527 & 0.524 & \drop{$-$0.099} \\
-K562-GWPS      & \best{0.339} & 0.343 & 0.343 & 0.309 & 0.343 & $-$0.030 \\
+IFN-$\gamma$   & 0.190 & \best{0.191} & 0.190 & 0.178 & \drop{0.175} & \drop{$-$0.015} \\
+IL-2           & 0.347 & \drop{0.341} & 0.349 & \best{0.355} & 0.351 & $-$0.007 \\
+Sanchez21 (up) & 0.087 & 0.092 & \best{0.098} & \drop{0.077} & 0.080 & \drop{$-$0.011} \\
+Sanchez21 (dn) & \best{0.099} & 0.096 & 0.093 & 0.094 & \drop{0.092} & $-$0.007 \\
+Carnevale22    & 0.056 & 0.055 & \drop{0.051} & \best{0.063} & 0.059 & $-$0.005 \\
+Scharenberg22  & 0.465 & 0.482 & \best{0.592} & 0.469 & 0.551 & $+$0.004 \\
+Steinhart      & \best{0.159} & 0.138 & 0.090 & 0.156 & \drop{0.076} & \drop{$-$0.083} \\
+K562-Essential & 0.556 & \best{0.603} & \drop{0.476} & 0.524 & 0.524 & \drop{$-$0.079} \\
+K562-GWPS      & \best{0.347} & 0.343 & 0.343 & \drop{0.309} & 0.343 & \drop{$-$0.038} \\
 \midrule
-\textbf{Average} & \best{0.254} & 0.258 & 0.254 & 0.243 & 0.250 & \\
+\textbf{Average} & 0.256 & \best{0.260} & 0.253 & 0.247 & 0.250 & \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Memory ($\Delta = +0.002$).}
-Removing the cross-experiment memory prompt has no measurable effect.
+\paragraph{Memory ($\Delta = +0.004$).}
+Removing the cross-experiment memory prompt has no measurable benefit; the average in fact
+rises slightly ($+0.004$) without it.
 LLM parametric knowledge already captures the biological context provided by memory entries
 in this leave-one-out benchmark, making the explicit memory module redundant.
+DeLM-style verified admission (a mechanical strategy-label check plus an LLM verifier that
+rejects hallucinated gene names) keeps the retained entries factually grounded, but does not
+change this conclusion: the marginal value of memory in the LOO setting remains $\approx$0.
 
-\paragraph{LLM ($\Delta = -0.005$ overall; up to $-0.099$ per dataset).}
-The LLM component is critical for pathway-specific tasks: Steinhart ($-0.059$, $-40\%$)
-and K562-Essential ($-0.099$, $-17\%$), where molecular pathway knowledge encoded
+\paragraph{LLM ($\Delta = -0.003$ overall; up to $-0.079$ per dataset).}
+The LLM component is critical for pathway-specific tasks: Steinhart ($-0.069$, $-44\%$)
+and K562-Essential ($-0.079$, $-14\%$), where molecular pathway knowledge encoded
 in the LLM (e.g., GD2 biosynthesis genes, core essential gene families)
 cannot be recovered from PPI or DepMap features alone.
-For Scharenberg22, however, removing the LLM \emph{improves} performance (+0.151),
+For Scharenberg22, however, removing the LLM \emph{improves} performance (+0.127),
 as the LLM's biological prior conflicts with the strong ML signal
 (leave-one-out LOO AUC\,=\,0.825 on K562 DepMap features).
 
-\paragraph{Online ML retraining ($\Delta = -0.011$).}
+\paragraph{Online ML retraining ($\Delta = -0.009$).}
 Freezing the ML model at the LOO prior produces the most consistent degradation across datasets
-($-0.011$ average, $-4.4\%$ relative), with the largest losses on K562-GWPS ($-0.030$),
-K562-Essential ($-0.048$), and Scharenberg22 ($-0.008$).
+($-0.009$ average, $-3.5\%$ relative), with the largest losses on K562-GWPS ($-0.038$)
+and K562-Essential ($-0.032$).
 Online adaptation is therefore the primary source of Waddington's advantage over
 static ML methods.
 
-\paragraph{Gene-name semantics ($\Delta = -0.004$ overall; $-0.073$ on Steinhart).}
+\paragraph{Gene-name semantics ($\Delta = -0.006$ overall; $-0.083$ on Steinhart).}
 Replacing gene names with anonymous identifiers collapses performance on
-pathway-specific tasks (Steinhart $-0.073$, $-49\%$; K562-Essential $-0.051$, $-9\%$),
+pathway-specific tasks (Steinhart $-0.083$, $-52\%$; K562-Essential $-0.032$, $-6\%$),
 confirming that the LLM's contribution on those tasks is mediated by
 biological gene-name knowledge rather than by task description or experimental feedback.
-Scharenberg22 again improves (+0.110) when gene-name semantics are removed,
+Scharenberg22 again improves (+0.086) when gene-name semantics are removed,
 mirroring the C\,$-$\,LLM finding.
 
 % ─────────────────────────────────────────────────────────────────────────────
