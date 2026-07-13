@@ -27,10 +27,10 @@
 \maketitle
 
 \noindent
-All numbers in this document are computed directly from the frozen benchmark outputs in
-\texttt{workspace/results/sequential/*.json} by \texttt{waddington\_select.analysis};
-no value is transcribed by hand. Figures are produced by
-\texttt{python -m waddington\_select.analysis figures}.
+All numbers in this document are computed directly from the frozen benchmark outputs
+(the JSON files under \texttt{workspace/results/sequential/}) by
+\texttt{waddington\_select.analysis}; no value is transcribed by hand.
+Figures are produced by \texttt{python -m waddington\_select.analysis figures}.
 
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 1  Dataset statistics
@@ -49,20 +49,23 @@ no value is transcribed by hand. Figures are produced by
   they are unchanged.) Hit rate is computed on the filtered pool.
 }
 \label{tab:datasets}
+\footnotesize
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{lllrrrc}
+\begin{tabular}{@{}llcrrrc@{}}
 \toprule
-Dataset & Task & Screen & $n_\text{genes}$ (all $\rightarrow$ N/E) & $n_\text{hits}$ (all $\rightarrow$ N/E) & Hit rate & Batch \\
+ & & & \multicolumn{2}{c}{all $\rightarrow$ non-essential} & & \\
+\cmidrule(lr){4-5}
+Dataset & Task & Screen & Genes & Hits & Hit rate & Batch \\
 \midrule
-IFN-$\gamma$    & Cytokine regulation (Jurkat)         & KO      & 18{,}418 $\rightarrow$ 17{,}785 & 920 $\rightarrow$ 802 & 4.5\% & 128 \\
-IL-2            & Cytokine regulation (Jurkat)         & KO      & 18{,}939 $\rightarrow$ 18{,}273 & 654 $\rightarrow$ 481 & 2.6\% & 128 \\
-Sanchez21 (up)  & Tau protein upregulation (neurons)   & KO      & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 859 & 4.8\% & 128 \\
-Sanchez21 (dn)  & Tau protein downregulation (neurons) & KO      & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 871 & 4.9\% & 128 \\
-Carnevale22     & T-cell fitness, adenosine pathway    & KO      & 18{,}861 $\rightarrow$ 18{,}224 & 943 $\rightarrow$ 868 & 4.8\% & 128 \\
-Scharenberg22   & Lysosomal choline recycling          & KO      &  1{,}061 $\rightarrow$  1{,}029 &  53 $\rightarrow$  49 & 4.8\% &  32 \\
-Steinhart       & GD2 surface expression (CAR-T)       & CRISPRa & 18{,}797 $\rightarrow$ 18{,}144 & 149 $\rightarrow$ 145 & 0.8\% & 128 \\
-K562-Essential  & Essential genes for K562 survival    & KO      &     623 $\rightarrow$      623 &  63 $\rightarrow$  63 & 10.1\% & 32 \\
-K562-GWPS       & Genome-wide fitness screen (K562)    & KO      &  9{,}193 $\rightarrow$  9{,}193 & 924 $\rightarrow$ 924 & 10.1\% & 128 \\
+IFN-$\gamma$    & Cytokine regulation (Jurkat)   & KO      & 18{,}418 $\rightarrow$ 17{,}785 & 920 $\rightarrow$ 802 & 4.5\% & 128 \\
+IL-2            & Cytokine regulation (Jurkat)   & KO      & 18{,}939 $\rightarrow$ 18{,}273 & 654 $\rightarrow$ 481 & 2.6\% & 128 \\
+Sanchez21 (up)  & Tau upregulation (neurons)     & KO      & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 859 & 4.8\% & 128 \\
+Sanchez21 (dn)  & Tau downregulation (neurons)   & KO      & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 871 & 4.9\% & 128 \\
+Carnevale22     & T-cell fitness (adenosine)     & KO      & 18{,}861 $\rightarrow$ 18{,}224 & 943 $\rightarrow$ 868 & 4.8\% & 128 \\
+Scharenberg22   & Lysosomal choline recycling    & KO      &  1{,}061 $\rightarrow$  1{,}029 &  53 $\rightarrow$  49 & 4.8\% &  32 \\
+Steinhart       & GD2 surface expression (CAR-T) & CRISPRa & 18{,}797 $\rightarrow$ 18{,}144 & 149 $\rightarrow$ 145 & 0.8\% & 128 \\
+K562-Essential  & K562 essentiality              & KO      &     623 $\rightarrow$      623 &  63 $\rightarrow$  63 & 10.1\% & 32 \\
+K562-GWPS       & K562 genome-wide fitness       & KO      &  9{,}193 $\rightarrow$  9{,}193 & 924 $\rightarrow$ 924 & 10.1\% & 128 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -111,6 +114,7 @@ benchmark is the same and the method is not.
   entries (K562-Essential 0.559, Scharenberg22 0.478) are largely that prior rather than the LLM.
 }
 \label{tab:main}
+\small
 \setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{lcccccc}
 \toprule
