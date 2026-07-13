@@ -8,7 +8,10 @@
 \usepackage{subcaption}
 \usepackage{array}
 \usepackage{rotating}
+\usepackage{graphicx}
+\usepackage{float}
 \geometry{margin=1in}
+\graphicspath{{../workspace/results/figures/}}
 
 %% Best value in row: \best{}, runner-up: \second{}
 \newcommand{\best}[1]{\textbf{#1}}
@@ -16,12 +19,23 @@
 \newcommand{\drop}[1]{\textcolor{red}{#1}}
 \newcommand{\gain}[1]{\textcolor{blue}{#1}}
 
+\title{Waddington: a hybrid ML\,+\,LLM agent for sequential CRISPR gene selection\\
+\large Results tables and figures}
+\date{}
+
 \begin{document}
+\maketitle
+
+\noindent
+All numbers in this document are computed directly from the frozen benchmark outputs in
+\texttt{workspace/results/sequential/*.json} by \texttt{waddington\_select.analysis};
+no value is transcribed by hand. Figures are produced by
+\texttt{python -m waddington\_select.analysis figures}.
 
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 1  Dataset statistics
 % ─────────────────────────────────────────────────────────────────────────────
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{%
   The nine BDA benchmark datasets used for evaluation.
@@ -50,7 +64,7 @@ K562-GWPS       & Genome-wide fitness screen (K562)      & KO   &  9{,}193 & 924
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 2  Comprehensive method comparison
 % ─────────────────────────────────────────────────────────────────────────────
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{%
   Hit ratio at round 5 across all nine benchmark datasets.
@@ -95,10 +109,45 @@ Notably, Waddington strongly exceeds OnlineAdaptive (the PerTurboAgent-style ML-
 on K562-GWPS (+0.075) and IFN-$\gamma$ (+0.007),
 demonstrating the value of combining online ML with LLM reasoning.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.82\linewidth]{01_discovery_curves.png}
+\caption{Discovery curves: cumulative hit ratio per round, averaged over the nine screens.
+The hybrid C-arm separates from every baseline from round~2 onwards.
+Per-screen values are given in Figure~\ref{fig:heatmap}; no error band is drawn because the spread
+across screens is dominated by how hard each screen is (K562-Essential 0.56 vs.\ Carnevale22 0.06),
+which would encode screen difficulty rather than uncertainty about a method.}
+\label{fig:curves}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.49\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{02_method_comparison.png}
+\end{minipage}\hfill
+\begin{minipage}{0.49\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{04_ablations.png}
+\end{minipage}
+\caption{Left: average hit ratio @ R5 per method (Table~\ref{tab:main}).
+Right: paired ablation deltas (Table~\ref{tab:ablation}). Colour states a fact about the
+\emph{variant} (it scored lower than the full arm), not a verdict on the component: a red
+``$-$~online~ML'' means \emph{removing} online ML costs 0.012, i.e.\ it is the most valuable part.}
+\label{fig:bars}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{03_dataset_heatmap.png}
+\caption{Per-screen hit ratio at round 5 for every method.}
+\label{fig:heatmap}
+\end{figure}
+
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 3  Architecture progression
 % ─────────────────────────────────────────────────────────────────────────────
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{%
   Stepwise improvement in average hit ratio at round 5 (9 datasets, 5 seeds).
@@ -123,119 +172,247 @@ C\,$-$\,ML (static LOO\,+\,LLM)    & Combine LOO prior with LLM      & 0.247 & +
 Each component provides an additive gain: the cross-experiment LOO prior (+0.083) contributes most,
 followed by the LLM biological prior (+0.022 when combined with the LOO prior),
 and online ML retraining (+0.009).
-Cross-experiment memory contributes $\approx$0 in this leave-one-out benchmark
-(in fact marginally negative, $-0.004$; see ablation in Table~\ref{tab:ablation}),
+Cross-experiment memory contributes exactly $0.000$ in this leave-one-out benchmark
+(paired ablation, Table~\ref{tab:ablation}),
 as the LLM's parametric knowledge already subsumes the explicit memory entries.
 
 % ─────────────────────────────────────────────────────────────────────────────
-% TABLE 4  Ablation study
+% TABLE 4  Ablation study  (PAIRED)
 % ─────────────────────────────────────────────────────────────────────────────
-\begin{table}[ht]
+\begin{table}[H]
 \centering
 \caption{%
-  Ablation study: hit ratio at round 5 (5 seeds, mean).
-  C is the full Waddington arm.
+  Ablation study, reported as \textbf{paired} deltas $\Delta = \text{variant} - \text{C}$, where C is
+  the full arm \emph{re-run inside the same experiment} (same seeds, same LLM sampling).
+  This matters: the arm is stochastic, so the C baseline re-runs to 0.259--0.262 across the ablation
+  experiments rather than exactly 0.256, and comparing a variant against C from a \emph{different}
+  run systematically understates every component.
   \textbf{C\,$-$\,Mem}: cross-experiment memory removed from the LLM prompt.
   \textbf{C\,$-$\,LLM}: LLM removed; online ML only.
-  \textbf{C\,$-$\,ML}: ML frozen at LOO prior; no in-experiment retraining.
-  \textbf{Shuffled}: all gene names shown to the LLM replaced with
-  anonymous identifiers (\texttt{GENE\_00001},~\ldots).
-  \best{Bold} = best per row; \drop{red} = largest drop from C.
+  \textbf{C\,$-$\,ML}: ML frozen at the LOO prior; no in-experiment retraining.
+  \textbf{Shuffled}: gene names shown to the LLM replaced with anonymous identifiers
+  (\texttt{GENE\_00001},~\ldots).
+  \drop{Red} = the component is load-bearing (removing it hurts); \gain{blue} = removing it helps.
 }
 \label{tab:ablation}
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{lcccccc}
+\setlength{\tabcolsep}{7pt}
+\begin{tabular}{lcccc}
 \toprule
-Dataset & C & C\,$-$\,Mem & C\,$-$\,LLM & C\,$-$\,ML & Shuffled & $\Delta_{\min}$ \\
+Dataset & $\Delta$ C\,$-$\,Mem & $\Delta$ C\,$-$\,LLM & $\Delta$ C\,$-$\,ML & $\Delta$ Shuffled \\
 \midrule
-IFN-$\gamma$   & 0.190 & \best{0.191} & 0.190 & 0.178 & \drop{0.175} & \drop{$-$0.015} \\
-IL-2           & 0.347 & \drop{0.341} & 0.349 & \best{0.355} & 0.351 & $-$0.007 \\
-Sanchez21 (up) & 0.087 & 0.092 & \best{0.098} & \drop{0.077} & 0.080 & \drop{$-$0.011} \\
-Sanchez21 (dn) & \best{0.099} & 0.096 & 0.093 & 0.094 & \drop{0.092} & $-$0.007 \\
-Carnevale22    & 0.056 & 0.055 & \drop{0.051} & \best{0.063} & 0.059 & $-$0.005 \\
-Scharenberg22  & 0.465 & 0.482 & \best{0.592} & 0.469 & 0.551 & $+$0.004 \\
-Steinhart      & \best{0.159} & 0.138 & 0.090 & 0.156 & \drop{0.076} & \drop{$-$0.083} \\
-K562-Essential & 0.556 & \best{0.603} & \drop{0.476} & 0.524 & 0.524 & \drop{$-$0.079} \\
-K562-GWPS      & \best{0.347} & 0.343 & 0.343 & \drop{0.309} & 0.343 & \drop{$-$0.038} \\
+IFN-$\gamma$   & $+0.003$ & $+0.000$ & \drop{$-0.013$} & \drop{$-0.015$} \\
+IL-2           & \drop{$-0.013$} & $-0.002$ & $+0.002$ & $-0.005$ \\
+Sanchez21 (up) & $+0.004$ & $+0.010$ & \drop{$-0.010$} & $-0.008$ \\
+Sanchez21 (dn) & $-0.005$ & $-0.003$ & \drop{$-0.010$} & $-0.004$ \\
+Carnevale22    & $-0.002$ & $-0.003$ & $+0.006$ & $+0.001$ \\
+Scharenberg22  & $+0.012$ & \gain{$+0.114$} & \drop{$-0.016$} & \gain{$+0.078$} \\
+Steinhart      & $-0.008$ & \drop{$-0.059$} & $-0.004$ & \drop{$-0.084$} \\
+K562-Essential & $+0.016$ & \drop{$-0.127$} & \drop{$-0.025$} & \drop{$-0.051$} \\
+K562-GWPS      & $-0.004$ & $-0.004$ & \drop{$-0.038$} & $-0.004$ \\
 \midrule
-\textbf{Average} & 0.256 & \best{0.260} & 0.253 & 0.247 & 0.250 & \\
+\textbf{Average (paired)} & $\mathbf{+0.000}$ & $\mathbf{-0.008}$ & $\mathbf{-0.012}$ & $\mathbf{-0.010}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Memory ($\Delta = +0.004$).}
-Removing the cross-experiment memory prompt has no measurable benefit; the average in fact
-rises slightly ($+0.004$) without it.
-LLM parametric knowledge already captures the biological context provided by memory entries
-in this leave-one-out benchmark, making the explicit memory module redundant.
+\paragraph{Memory ($\Delta = +0.000$).}
+Removing the cross-experiment memory prompt changes nothing: the paired average is exactly zero.
+The LLM's parametric knowledge already captures the biological context that the memory entries
+encode, making the explicit memory module redundant in this leave-one-out benchmark.
 DeLM-style verified admission (a mechanical strategy-label check plus an LLM verifier that
 rejects hallucinated gene names) keeps the retained entries factually grounded, but does not
-change this conclusion: the marginal value of memory in the LOO setting remains $\approx$0.
+change this conclusion --- correctness was never the bottleneck.
 
-\paragraph{LLM ($\Delta = -0.003$ overall; up to $-0.079$ per dataset).}
-The LLM component is critical for pathway-specific tasks: Steinhart ($-0.069$, $-44\%$)
-and K562-Essential ($-0.079$, $-14\%$), where molecular pathway knowledge encoded
-in the LLM (e.g., GD2 biosynthesis genes, core essential gene families)
-cannot be recovered from PPI or DepMap features alone.
-For Scharenberg22, however, removing the LLM \emph{improves} performance (+0.127),
-as the LLM's biological prior conflicts with the strong ML signal
-(leave-one-out LOO AUC\,=\,0.825 on K562 DepMap features).
+\paragraph{Online ML retraining ($\Delta = -0.012$).}
+Freezing the ML model at the LOO prior produces the most consistent degradation of any ablation:
+it hurts on 7 of 9 screens, with the largest losses on K562-GWPS ($-0.038$) and
+K562-Essential ($-0.025$).
+Online adaptation is the single most valuable component of the arm.
 
-\paragraph{Online ML retraining ($\Delta = -0.009$).}
-Freezing the ML model at the LOO prior produces the most consistent degradation across datasets
-($-0.009$ average, $-3.5\%$ relative), with the largest losses on K562-GWPS ($-0.038$)
-and K562-Essential ($-0.032$).
-Online adaptation is therefore the primary source of Waddington's advantage over
-static ML methods.
+\paragraph{LLM ($\Delta = -0.008$ on average, but bimodal).}
+The average understates the LLM: it is decisive where molecular pathway knowledge cannot be
+recovered from PPI or DepMap features --- K562-Essential ($-0.127$) and Steinhart ($-0.059$) ---
+and actively harmful on Scharenberg22 ($+0.114$ when removed), where the LLM's biological prior
+conflicts with an unusually strong ML signal (LOO AUC $=0.825$ on K562 DepMap features).
+The near-zero mean is therefore a cancellation of large opposite effects, not a small effect.
 
-\paragraph{Gene-name semantics ($\Delta = -0.006$ overall; $-0.083$ on Steinhart).}
-Replacing gene names with anonymous identifiers collapses performance on
-pathway-specific tasks (Steinhart $-0.083$, $-52\%$; K562-Essential $-0.032$, $-6\%$),
-confirming that the LLM's contribution on those tasks is mediated by
-biological gene-name knowledge rather than by task description or experimental feedback.
-Scharenberg22 again improves (+0.086) when gene-name semantics are removed,
-mirroring the C\,$-$\,LLM finding.
+\paragraph{Gene-name semantics ($\Delta = -0.010$; $-0.084$ on Steinhart).}
+Replacing gene names with anonymous identifiers collapses performance on pathway-specific tasks
+(Steinhart $-0.084$, K562-Essential $-0.051$), confirming that the LLM's contribution on those tasks
+is mediated by \emph{biological gene-name knowledge} rather than by the task description or by
+experimental feedback. Scharenberg22 again improves ($+0.078$), mirroring the C\,$-$\,LLM finding.
 
 % ─────────────────────────────────────────────────────────────────────────────
-% FIGURE PROMPTS (for reproduction or illustration)
+\section*{Does giving the LLM tools help? (No.)}
+
+The natural next step from a pipeline is a \emph{tool-using agent} in the BioDiscoveryAgent /
+PerTurboAgent mould: let the LLM plan, call an ML-ranking tool and a pathway-enrichment tool, and
+commit a batch itself. We implemented exactly that (a task-specialised harness with a JSON action
+protocol; \texttt{ml\_rank} / \texttt{enrich} / \texttt{finish}; no agent framework) and benchmarked
+it against the pipeline on identical screens and budgets.
+
+\begin{table}[H]
+\centering
+\caption{%
+  Tool-using agent vs.\ the deterministic pipeline (hit ratio @ R5).
+  The agent plans its own rounds and calls tools; the pipeline fuses online ML with LLM reasoning
+  under a fixed policy. The agent is \emph{worse on 8 of 9 screens}.
+}
+\label{tab:agent}
+\setlength{\tabcolsep}{8pt}
+\begin{tabular}{lccc}
+\toprule
+Dataset & Tool-using agent & Pipeline (C) & $\Delta$ \\
+\midrule
+Scharenberg22  & \best{0.582} & 0.465 & \gain{$+0.116$} \\
+Carnevale22    & 0.044 & \best{0.056} & $-0.012$ \\
+IFN-$\gamma$   & 0.163 & \best{0.190} & $-0.027$ \\
+Sanchez21 (up) & 0.059 & \best{0.087} & $-0.029$ \\
+Sanchez21 (dn) & 0.049 & \best{0.099} & $-0.050$ \\
+Steinhart      & 0.100 & \best{0.159} & $-0.059$ \\
+IL-2           & 0.264 & \best{0.347} & $-0.083$ \\
+K562-GWPS      & 0.209 & \best{0.347} & \drop{$-0.138$} \\
+K562-Essential & 0.413 & \best{0.556} & \drop{$-0.143$} \\
+\midrule
+\textbf{Average} & 0.209 & \best{0.256} & $\mathbf{-0.047}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\linewidth]{05_agent_vs_pipeline.png}
+\caption{Per-screen delta of the tool-using agent against the pipeline.
+It wins on exactly one screen and loses worst precisely where the ML signal is strongest
+(K562-Essential, K562-GWPS) --- given freedom, the LLM \emph{overrides} a well-calibrated model.}
+\label{fig:agent}
+\end{figure}
+
+The agent wins on exactly one screen (Scharenberg22, $+0.116$), where its runtime pathway-enrichment
+tool pays off, and loses most on the two genome-wide screens where the ML prior is strongest.
+The failure mode is instructive: given the freedom to act, the LLM overrides a model that is better
+calibrated than it is. \textbf{Constraining the LLM to a fixed fusion policy is not a limitation of
+the pipeline --- it is the reason the pipeline wins.}
+
+\subsection*{Transplanting the agent's one good idea}
+
+Since enrichment was the agent's only advantage, we transplanted it into the pipeline (Enrichr over
+the hits revealed so far, injected into the LLM prompt each round, gated to significant and coherent
+pathways), and separately tested an externalised \emph{skill library} distilled from past experiments.
+
+\begin{table}[H]
+\centering
+\caption{%
+  Agent-style augmentations of the pipeline, as \textbf{paired} deltas over the same runs.
+  Both are within noise of zero.
+}
+\label{tab:aug}
+\setlength{\tabcolsep}{8pt}
+\begin{tabular}{lccc}
+\toprule
+Augmentation & C & C\,$+$\,augmentation & $\Delta$ (paired) \\
+\midrule
+Runtime pathway enrichment (gated) & 0.260 & 0.263 & $+0.003$ \\
+Externalised skill library         & 0.258 & 0.259 & $+0.001$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Runtime enrichment captures the Scharenberg22 gain ($+0.061$ on that screen) without the collateral
+damage the free agent suffered, but nets only $+0.003$ overall: on genome-wide essentiality screens
+the enriched terms are highly significant yet \emph{non-selective} (ribosome, proteasome,
+spliceosome), so ``prioritise genes in these pathways'' barely narrows a 9{,}000-gene pool.
+The skill library adds $+0.001$. Together with the memory ablation ($+0.000$), this is a consistent
+negative result about \emph{externalisation}: memory, skills and retrieved pathways all add
+$\approx 0$ once the model already has its parametric knowledge plus the hits it has observed.
+
 % ─────────────────────────────────────────────────────────────────────────────
+\section*{Explainability: what is the LLM actually contributing?}
 
-\bigskip
-\noindent\rule{\linewidth}{0.4pt}
-\subsection*{Figure Prompts}
+The ablations say \emph{how much} each component is worth; they cannot say \emph{where} the value
+comes from. We therefore instrumented the arm to record, for every selected gene, a counterfactual
+attribution against the ML model's own top-$k$:
 
-\paragraph{Figure 1 — Round Progression Curves.}
-\textit{Suggested prompt:}
-Plot a $3 \times 3$ grid of line charts, one panel per dataset.
-Each panel shows hit ratio on the y-axis vs.\ round index (1--5) on the x-axis.
-Draw three lines per panel: A (Coreset, dashed grey), B (LLM Reasoning, dashed orange),
-C (Waddington, solid blue). Add a shaded confidence band ($\pm 1$ standard error across 5 seeds).
-Highlight panels where C $\gg$ B (K562-GWPS, IL-2, IFN-$\gamma$) and panels where B $\approx$ C
-(Steinhart, Scharenberg22) with a light background tint.
-Title each panel with dataset name and final-round gap (C$-$B).
-Data: use per-round hit\_ratio values from the \texttt{v8\_results.json} output of \texttt{run\_sequential.py --arms waddington\_v14 llm\_reasoning coreset --seeds 5}.
+\begin{itemize}\itemsep2pt
+  \item \textbf{both} --- the LLM named it \emph{and} the ML would have selected it anyway;
+  \item \textbf{LLM-only} --- the LLM named it and the ML would \emph{not} have selected it
+        (this is the LLM's marginal contribution);
+  \item \textbf{ML-only} --- the LLM did not name it; it entered on ML score alone.
+\end{itemize}
 
-\paragraph{Figure 2 — Ablation Heatmap.}
-\textit{Suggested prompt:}
-Create a heatmap with datasets on the y-axis (9 rows) and ablation variants on the x-axis
-(C$-$Mem, C$-$LLM, C$-$ML, Shuffled, 4 columns).
-Cell value = hit ratio delta relative to full C ($\Delta = \text{ablation} - C$).
-Use a diverging colormap (blue = gain, red = loss), symmetric around 0,
-clipped at $[-0.15, +0.15]$.
-Annotate each cell with the $\Delta$ value (3 decimal places).
-Add a bottom row showing column averages.
-This figure highlights: (i) the LLM is critical for Steinhart and K562-Essential;
-(ii) the LLM hurts Scharenberg22; (iii) online ML retraining (C$-$ML) consistently degrades
-most datasets; (iv) gene-name semantics (Shuffled) selectively affect pathway tasks.
+\noindent
+Pairing each pick with its revealed outcome gives the hit rate \emph{per source}
+(9 screens $\times$ 5 rounds, $\approx$4{,}200 selected genes).
+K562-GWPS is reported separately: it is the one screen routed through the two-stage policy
+(the ML shortlists 384 candidates and the \emph{LLM} makes the final selection), so the
+``ML-only'' category cannot exist there and pooling it would corrupt the rates.
 
-\paragraph{Figure 3 — Component Decomposition Bar Chart (optional).}
-\textit{Suggested prompt:}
-Horizontal grouped bar chart.
-Each dataset is one group; bars represent average hit@R5 for:
-Random, Coreset (A), LLM (B), OnlineAdaptive, Waddington (C).
-Sort datasets by C$-$B gap (ascending).
-Annotate the Waddington bar with the dataset's routing category
-(ml\_heavy / baseline / two\_stage) to visualise how routing strategy
-correlates with the ML vs.\ LLM trade-off.
+\begin{table}[H]
+\centering
+\caption{%
+  Hit rate by attribution source, over the eight weighted-fusion screens.
+  \emph{Pooled} counts every selected gene once; \emph{macro} averages the per-screen rates
+  (screens with $\ge 10$ picks in that category).
+  Both aggregations agree on the headline: agreement between the two components is by far the
+  strongest signal, and the LLM's unilateral picks are \emph{not} better than the ML's.
+}
+\label{tab:attrib}
+\setlength{\tabcolsep}{8pt}
+\begin{tabular}{lccc}
+\toprule
+Source & Genes selected & Hit rate (pooled) & Hit rate (macro) \\
+\midrule
+\textbf{ML $+$ LLM agree} & 800  & \best{21.1\%} & \best{22.5\%} \\
+ML only                   & 1{,}851 & 15.3\% & 13.4\% \\
+LLM only                  & 1{,}509 & 10.2\% & 13.2\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{06_attribution.png}
+\caption{Left: what each round's batch is made of, pooled over the eight weighted-fusion screens.
+Right: the hit rate of each source. Genes that \emph{both} components endorse hit at roughly twice
+the rate of genes the LLM introduces on its own.}
+\label{fig:attrib}
+\end{figure}
+
+\paragraph{The LLM is a verifier, not a proposer.}
+Genes that both components endorse hit at $21.1\%$ --- about $1.4\times$ the ML's own rate and
+$2\times$ the rate of the genes the LLM introduces unilaterally.
+The LLM's \emph{marginal} picks are no better than the ML's (worse when pooled, equal when
+macro-averaged, so the honest reading is ``no better'').
+This single measurement explains the two results above that otherwise look unrelated:
+
+\begin{itemize}\itemsep2pt
+  \item why \textbf{removing the LLM costs only $0.008$} --- the genes it adds on its own are not
+        better than what the ML would have picked instead; its value is concentrated in the
+        \emph{agreement} signal it provides over the ML's candidates;
+  \item why \textbf{giving the LLM tools makes it worse} ($-0.047$, Table~\ref{tab:agent}) --- the
+        free agent selects mostly on its own judgement, which is precisely the weakest source.
+\end{itemize}
+
+\noindent
+The design implication is the opposite of the prevailing ``more agency'' direction: the LLM should
+be used to \emph{re-weight} a calibrated model's candidates, not to choose freely.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.52\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{07_shap_features.png}
+\end{minipage}\hfill
+\begin{minipage}{0.46\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{08_calibration.png}
+\end{minipage}
+\caption{Left: features driving the ML score over the genes actually selected
+(LightGBM SHAP contributions; DepMap essentiality and PPI connectivity dominate).
+Right: calibration --- the top-scoring quintile of tested genes hits about twice as often as the
+bottom quintile, though the curve is flat in the middle and the range is narrow because only
+\emph{selected} genes are ever tested.}
+\label{fig:shap}
+\end{figure}
 
 \end{document}
