@@ -38,28 +38,59 @@ no value is transcribed by hand. Figures are produced by
 \begin{table}[H]
 \centering
 \caption{%
-  The nine BDA benchmark datasets used for evaluation.
-  All datasets are publicly available CRISPR perturbation screens.
-  Hit rate $= n_\text{hits}/n_\text{genes}$.
-  Batch is the number of genes selected per round (5 rounds per experiment).
+  The nine benchmark screens. The screen data (phenotype scores and the hit sets) are taken
+  \emph{unchanged} from the BioDiscoveryAgent (BDA) release (Roohani et al., ICLR 2025): our hit labels are
+  exactly BDA's \texttt{topmovers} files (their top 5\% of genes by $|$effect size$|$).
+  \textbf{We then remove the 684 core-essential genes of CEGv2} (Hart et al.) from the candidate
+  pool. This is BDA's own non-essential (``N/E'') evaluation convention --- essential genes are
+  detected as hits under almost any screen and reward nothing --- and it is what BDA reports
+  alongside the all-gene numbers. Columns show the pool \emph{before $\rightarrow$ after} that filter;
+  all results in this paper use the filtered pool. (The two K562 screens contain no CEGv2 gene, so
+  they are unchanged.) Hit rate is computed on the filtered pool.
 }
 \label{tab:datasets}
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lllrrrc}
 \toprule
-Dataset & Task & Screen & $n_\text{genes}$ & $n_\text{hits}$ & Hit rate & Batch \\
+Dataset & Task & Screen & $n_\text{genes}$ (all $\rightarrow$ N/E) & $n_\text{hits}$ (all $\rightarrow$ N/E) & Hit rate & Batch \\
 \midrule
-IFN-$\gamma$    & Cytokine regulation (Jurkat)           & KO   & 17{,}785 & 802 & 4.5\% & 128 \\
-IL-2            & Cytokine regulation (Jurkat)           & KO   & 18{,}273 & 481 & 2.6\% & 128 \\
-Sanchez21 (up)  & Tau protein upregulation (neurons)     & KO   & 17{,}807 & 859 & 4.8\% & 128 \\
-Sanchez21 (dn)  & Tau protein downregulation (neurons)   & KO   & 17{,}807 & 871 & 4.9\% & 128 \\
-Carnevale22     & T-cell fitness, adenosine pathway      & KO   & 18{,}224 & 868 & 4.8\% & 128 \\
-Scharenberg22   & Lysosomal choline recycling            & KO   &  1{,}029 &  49 & 4.8\% &  32 \\
-Steinhart       & GD2 surface expression (CAR-T)         & CRISPRa & 18{,}144 & 145 & 0.8\% & 128 \\
-K562-Essential  & Essential genes for K562 survival      & KO   &    623   &  63 & 10.1\% & 32 \\
-K562-GWPS       & Genome-wide fitness screen (K562)      & KO   &  9{,}193 & 924 & 10.1\% & 128 \\
+IFN-$\gamma$    & Cytokine regulation (Jurkat)         & KO      & 18{,}418 $\rightarrow$ 17{,}785 & 920 $\rightarrow$ 802 & 4.5\% & 128 \\
+IL-2            & Cytokine regulation (Jurkat)         & KO      & 18{,}939 $\rightarrow$ 18{,}273 & 654 $\rightarrow$ 481 & 2.6\% & 128 \\
+Sanchez21 (up)  & Tau protein upregulation (neurons)   & KO      & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 859 & 4.8\% & 128 \\
+Sanchez21 (dn)  & Tau protein downregulation (neurons) & KO      & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 871 & 4.9\% & 128 \\
+Carnevale22     & T-cell fitness, adenosine pathway    & KO      & 18{,}861 $\rightarrow$ 18{,}224 & 943 $\rightarrow$ 868 & 4.8\% & 128 \\
+Scharenberg22   & Lysosomal choline recycling          & KO      &  1{,}061 $\rightarrow$  1{,}029 &  53 $\rightarrow$  49 & 4.8\% &  32 \\
+Steinhart       & GD2 surface expression (CAR-T)       & CRISPRa & 18{,}797 $\rightarrow$ 18{,}144 & 149 $\rightarrow$ 145 & 0.8\% & 128 \\
+K562-Essential  & Essential genes for K562 survival    & KO      &     623 $\rightarrow$      623 &  63 $\rightarrow$  63 & 10.1\% & 32 \\
+K562-GWPS       & Genome-wide fitness screen (K562)    & KO      &  9{,}193 $\rightarrow$  9{,}193 & 924 $\rightarrow$ 924 & 10.1\% & 128 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\subsection*{Relationship to BioDiscoveryAgent}
+
+We use BDA's \emph{data}, not their method: the ground-truth phenotype scores and \texttt{topmovers}
+hit sets are theirs, and we verified that our hit labels are exactly
+\texttt{topmovers} $\cap$ (pool $\setminus$ CEGv2) for every screen.
+\textbf{We did not run BioDiscoveryAgent, and the numbers in this paper are not a reproduction of
+theirs and are not directly comparable to them.} Two differences matter:
+
+\begin{itemize}\itemsep2pt
+  \item \textbf{We add a cross-experiment ML prior that BDA does not have.} Our LOO-LightGBM is
+  trained on the \emph{other} screens' hit labels using PPI / KEGG / pLI / DepMap features. That model
+  alone averages 0.217 --- already above the best LLM hit ratio BDA reports on the screens we share.
+  Our gains over BDA's published numbers should therefore be read as ``a cross-experiment prior helps
+  a lot'', not as ``our agent is a better agent''.
+  \item \textbf{Different LLM and different baseline implementations} (we use Claude Haiku 4.5;
+  BDA's headline model is Claude 3.5 Sonnet; our Coreset is our own implementation and scores
+  differently from theirs, e.g.\ 0.100 vs.\ 0.066 on IFN-$\gamma$).
+\end{itemize}
+
+\noindent
+As a sanity check that the data and scoring are aligned, the \emph{random} baseline agrees closely
+with BDA's reported random N/E values (IL-2: 0.031 vs.\ 0.031; IFN-$\gamma$: 0.029 vs.\ 0.035;
+Sanchez21-dn: 0.029 vs.\ 0.034), while the method numbers diverge --- which is what one expects if the
+benchmark is the same and the method is not.
 
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 2  Comprehensive method comparison
@@ -71,6 +102,13 @@ K562-GWPS       & Genome-wide fitness screen (K562)      & KO   &  9{,}193 & 924
   All methods are reported over 5 seeds.
   \textbf{Bold} = best per row; \underline{underline} = second best.
   Waddington is our proposed method (C-arm), using DeLM-verified cross-experiment memory.
+  \\[2pt]
+  $^\dagger$\textbf{B is not a pure-LLM baseline.} When the LLM names too few genes that exist in the
+  pool, the batch is padded from the static LOO-LightGBM ranking. Averaged over the five rounds that
+  padding is 19\% (IFN-$\gamma$), 19\% (IL-2), 46\% (Sanchez21-up), 32\% (Sanchez21-dn),
+  7\% (Carnevale22), 68\% (Scharenberg22), 43\% (Steinhart), \textbf{86\% (K562-Essential)} and
+  0\% (K562-GWPS). B should be read as ``LLM, padded with a static ML prior'', and its two strongest
+  entries (K562-Essential 0.559, Scharenberg22 0.478) are largely that prior rather than the LLM.
 }
 \label{tab:main}
 \setlength{\tabcolsep}{4.5pt}
@@ -81,7 +119,7 @@ Dataset
   & LOO-LightGBM
   & OnlineAdapt.
   & A: Coreset
-  & B: LLM
+  & B: LLM$^\dagger$
   & C: Waddington \\
 \midrule
 IFN-$\gamma$   & 0.029 & 0.168 & \second{0.183} & 0.100 & 0.160 & \best{0.190} \\
@@ -99,15 +137,15 @@ K562-GWPS      & 0.065 & 0.247 & \second{0.273} & 0.156 & 0.225 & \best{0.347} \
 \end{tabular}
 \end{table}
 
-Waddington (C) achieves the best average hit ratio (0.256), outperforming the pure-LLM baseline B
+Waddington (C) achieves the best average hit ratio (0.256), outperforming the LLM baseline B
 by 13.7\% relative (+0.031) and the algorithmic baseline A by 91.6\% (+0.122).
-It surpasses or matches every other method on 5 of 9 datasets; on the remaining four
-(Sanchez21-dn, Carnevale22, Scharenberg22, K562-Essential) it is a close runner-up,
-trailing the leader by at most 0.013, as either OnlineAdaptive or B (LLMReasoning)
-narrowly benefits from a strong ML signal or a narrow, well-characterised biological prior.
+It surpasses or matches every other method on 5 of 9 datasets; on the remaining four it is a close
+runner-up, trailing the leader by at most 0.013.
 Notably, Waddington strongly exceeds OnlineAdaptive (the PerTurboAgent-style ML-only method)
-on K562-GWPS (+0.075) and IFN-$\gamma$ (+0.007),
-demonstrating the value of combining online ML with LLM reasoning.
+on K562-GWPS (+0.075) and IFN-$\gamma$ (+0.007).
+Note that on the two screens where B edges ahead of C (Scharenberg22, K562-Essential) the LLM is
+barely doing the work: 68\% and 86\% of B's batch there is static-ML padding
+(Table~\ref{tab:main}$^\dagger$), so those entries do not support a claim about LLM reasoning.
 
 \begin{figure}[H]
 \centering
@@ -229,18 +267,30 @@ it hurts on 7 of 9 screens, with the largest losses on K562-GWPS ($-0.038$) and
 K562-Essential ($-0.025$).
 Online adaptation is the single most valuable component of the arm.
 
-\paragraph{LLM ($\Delta = -0.008$ on average, but bimodal).}
-The average understates the LLM: it is decisive where molecular pathway knowledge cannot be
-recovered from PPI or DepMap features --- K562-Essential ($-0.127$) and Steinhart ($-0.059$) ---
-and actively harmful on Scharenberg22 ($+0.114$ when removed), where the LLM's biological prior
-conflicts with an unusually strong ML signal (LOO AUC $=0.825$ on K562 DepMap features).
-The near-zero mean is therefore a cancellation of large opposite effects, not a small effect.
+\paragraph{The ``LLM'' branch ($\Delta = -0.008$ on average, but bimodal) --- and an important caveat.}
+C\,$-$\,LLM removes the entire LLM-branch endorsement term from the fusion. That term is \emph{not}
+purely the LLM: it also carries the static-ML padding described in Table~\ref{tab:main}$^\dagger$.
+The two screens with the largest effects are exactly the two with the most padding, so they must be
+read carefully:
+\begin{itemize}\itemsep2pt
+  \item \textbf{K562-Essential ($-0.127$): this is \emph{not} evidence for LLM biology.} 86\% of the
+  branch's genes there come from the static LOO ranker (the LLM names almost nothing that exists in
+  the 623-gene pool). What the ablation removes is the \emph{static cross-experiment prior} being
+  blended into the online model --- a real and valuable signal, but not LLM reasoning. We retract the
+  earlier reading of this number.
+  \item \textbf{Scharenberg22 ($+0.114$ when removed):} 68\% padding, so ``the LLM hurts here'' is
+  likewise mostly ``the static prior hurts here'', conflicting with an unusually strong online ML
+  signal (LOO AUC $=0.825$ on K562 DepMap features).
+  \item \textbf{Steinhart ($-0.059$): this one does survive.} Padding is 43\%, so a majority of the
+  branch is genuine LLM naming, and the gene-name ablation below independently confirms it.
+\end{itemize}
 
-\paragraph{Gene-name semantics ($\Delta = -0.010$; $-0.084$ on Steinhart).}
-Replacing gene names with anonymous identifiers collapses performance on pathway-specific tasks
-(Steinhart $-0.084$, K562-Essential $-0.051$), confirming that the LLM's contribution on those tasks
-is mediated by \emph{biological gene-name knowledge} rather than by the task description or by
-experimental feedback. Scharenberg22 again improves ($+0.078$), mirroring the C\,$-$\,LLM finding.
+\paragraph{Gene-name semantics ($\Delta = -0.010$; $-0.084$ on Steinhart) --- the clean probe of LLM biology.}
+This ablation is immune to the padding confound in a way C\,$-$\,LLM is not: the branch is still
+present and still padded, but the LLM can no longer recognise the genes it is naming. Performance
+collapses on Steinhart ($-0.084$) and drops on K562-Essential ($-0.051$), so the LLM's contribution
+on pathway-specific tasks is genuinely mediated by \emph{biological gene-name knowledge} rather than
+by the task description or by experimental feedback. Scharenberg22 again improves ($+0.078$).
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section*{Does giving the LLM tools help? (No.)}
@@ -341,6 +391,12 @@ attribution against the ML model's own top-$k$:
 \end{itemize}
 
 \noindent
+\textbf{Only genes the LLM actually named count as LLM picks.} The LLM branch pads its batch from the
+static ranker (Table~\ref{tab:main}$^\dagger$), and crediting that padding to the LLM would make
+``ML and LLM agree'' partly mean ``two ML models agree''. An earlier version of this analysis made
+exactly that error: it reported an agreement bucket of $n=800$ at a $21.1\%$ hit rate, of which
+$\approx$87\% was static-ranker padding. Excluding it sharpens the result considerably.
+
 Pairing each pick with its revealed outcome gives the hit rate \emph{per source}
 (9 screens $\times$ 5 rounds, $\approx$4{,}200 selected genes).
 K562-GWPS is reported separately: it is the one screen routed through the two-stage policy
@@ -353,18 +409,20 @@ K562-GWPS is reported separately: it is the one screen routed through the two-st
   Hit rate by attribution source, over the eight weighted-fusion screens.
   \emph{Pooled} counts every selected gene once; \emph{macro} averages the per-screen rates
   (screens with $\ge 10$ picks in that category).
-  Both aggregations agree on the headline: agreement between the two components is by far the
-  strongest signal, and the LLM's unilateral picks are \emph{not} better than the ML's.
+  Genuine agreement is rare --- only 101 of $\approx$4{,}200 picks --- but it is by far the strongest
+  signal, at roughly \textbf{three times} the ML's own hit rate. The LLM's unilateral picks are
+  \emph{worse} than the ML's when pooled and about equal when macro-averaged, so the defensible claim
+  is that they are \emph{no better}.
 }
 \label{tab:attrib}
 \setlength{\tabcolsep}{8pt}
-\begin{tabular}{lccc}
+\begin{tabular}{lcccc}
 \toprule
-Source & Genes selected & Hit rate (pooled) & Hit rate (macro) \\
+Source & Genes selected & Hits & Hit rate (pooled) & Hit rate (macro) \\
 \midrule
-\textbf{ML $+$ LLM agree} & 800  & \best{21.1\%} & \best{22.5\%} \\
-ML only                   & 1{,}851 & 15.3\% & 13.4\% \\
-LLM only                  & 1{,}509 & 10.2\% & 13.2\% \\
+\textbf{ML $+$ LLM agree} & 101 & 47 & \best{46.5\%} $\pm$ 9.7 & \best{41.5\%} \\
+ML only                   & 3{,}307 & 487 & 14.7\% $\pm$ 1.2 & 14.9\% \\
+LLM only                  & 752 & 61 & 8.1\% $\pm$ 2.0 & 13.1\% \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -379,18 +437,19 @@ the rate of genes the LLM introduces on its own.}
 \end{figure}
 
 \paragraph{The LLM is a verifier, not a proposer.}
-Genes that both components endorse hit at $21.1\%$ --- about $1.4\times$ the ML's own rate and
-$2\times$ the rate of the genes the LLM introduces unilaterally.
-The LLM's \emph{marginal} picks are no better than the ML's (worse when pooled, equal when
-macro-averaged, so the honest reading is ``no better'').
+The LLM is a \emph{poor proposer}: left to itself it picks genes that hit at $8.1\%$, well below the
+ML's own $14.7\%$. But it is a \emph{strong verifier}: when it independently names a gene the ML also
+ranks in its top-$k$, that gene hits at $46.5\%$ --- roughly three times the ML's rate. Such agreement
+is rare (101 of $\approx$4{,}200 picks, i.e.\ $2.4\%$), which is precisely why the component is worth
+so little on average and so much where it fires.
 This single measurement explains the two results above that otherwise look unrelated:
 
 \begin{itemize}\itemsep2pt
-  \item why \textbf{removing the LLM costs only $0.008$} --- the genes it adds on its own are not
-        better than what the ML would have picked instead; its value is concentrated in the
-        \emph{agreement} signal it provides over the ML's candidates;
-  \item why \textbf{giving the LLM tools makes it worse} ($-0.047$, Table~\ref{tab:agent}) --- the
-        free agent selects mostly on its own judgement, which is precisely the weakest source.
+  \item why \textbf{removing the LLM costs only $0.008$} --- the genes it proposes on its own are
+        \emph{worse} than what the ML would have picked instead, so losing them costs nothing; what is
+        lost is a rare but highly informative agreement signal;
+  \item why \textbf{giving the LLM tools makes it worse} ($-0.047$, Table~\ref{tab:agent}) --- a free
+        agent selects mostly on its own judgement, which is precisely the weakest of the three sources.
 \end{itemize}
 
 \noindent
