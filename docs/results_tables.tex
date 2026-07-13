@@ -38,15 +38,24 @@ Figures are produced by \texttt{python -m waddington\_select.analysis figures}.
 \begin{table}[H]
 \centering
 \caption{%
-  The nine benchmark screens. The screen data (phenotype scores and the hit sets) are taken
-  \emph{unchanged} from the BioDiscoveryAgent (BDA) release (Roohani et al., ICLR 2025): our hit labels are
-  exactly BDA's \texttt{topmovers} files (their top 5\% of genes by $|$effect size$|$).
-  \textbf{We then remove the 684 core-essential genes of CEGv2} (Hart et al.) from the candidate
-  pool. This is BDA's own non-essential (``N/E'') evaluation convention --- essential genes are
-  detected as hits under almost any screen and reward nothing --- and it is what BDA reports
-  alongside the all-gene numbers. Columns show the pool \emph{before $\rightarrow$ after} that filter;
-  all results in this paper use the filtered pool. (The two K562 screens contain no CEGv2 gene, so
-  they are unchanged.) Hit rate is computed on the filtered pool.
+  The nine benchmark screens. The phenotype scores and hit sets are taken \emph{unchanged} from the
+  BioDiscoveryAgent (BDA) release (Roohani et al., ICLR 2025); we verified for all nine that our hit
+  labels are exactly \texttt{topmovers} $\cap$ (pool $\setminus$ CEGv2). Task descriptions are BDA's
+  own task prompts, not our paraphrases.
+  \textbf{We remove the 684 core-essential genes of CEGv2} (Hart et al.) from the candidate pool ---
+  BDA's own non-essential (``N/E'') convention, since essential genes are detected as hits under
+  almost any screen and reward nothing. Columns show the pool \emph{before $\rightarrow$ after} that
+  filter; all results use the filtered pool (the two K562 screens contain no CEGv2 gene, so they are
+  unchanged).
+  \\[3pt]
+  \textbf{Perturbation.} KO = CRISPR knockout (loss of function); CRISPRi = interference/knockdown
+  (loss of function); CRISPRa = activation (gain of function). Note that our DepMap features are
+  \emph{all knockout-derived}, so they transfer least well to the gain-of-function screen (Steinhart)
+  --- which is exactly where the LLM contributes most (Table~\ref{tab:ablation}).
+  $^\ast$BDA's prompt does not state which arm of the Schmidt CRISPRa/CRISPRi screens their data come
+  from. $^\ddagger$The two Perturb-seq screens define a hit as a strong \emph{transcriptome-wide}
+  response (top 10\%), not a specific phenotype at the top 5\% used for the other seven --- which is
+  why their hit rates are higher.
 }
 \label{tab:datasets}
 \footnotesize
@@ -55,17 +64,17 @@ Figures are produced by \texttt{python -m waddington\_select.analysis figures}.
 \toprule
  & & & \multicolumn{2}{c}{all $\rightarrow$ non-essential} & & \\
 \cmidrule(lr){4-5}
-Dataset & Task & Screen & Genes & Hits & Hit rate & Batch \\
+Dataset & Task (BDA prompt) & Perturb. & Genes & Hits & Hit rate & Batch \\
 \midrule
-IFN-$\gamma$    & Cytokine regulation (Jurkat)   & KO      & 18{,}418 $\rightarrow$ 17{,}785 & 920 $\rightarrow$ 802 & 4.5\% & 128 \\
-IL-2            & Cytokine regulation (Jurkat)   & KO      & 18{,}939 $\rightarrow$ 18{,}273 & 654 $\rightarrow$ 481 & 2.6\% & 128 \\
-Sanchez21 (up)  & Tau upregulation (neurons)     & KO      & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 859 & 4.8\% & 128 \\
-Sanchez21 (dn)  & Tau downregulation (neurons)   & KO      & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 871 & 4.9\% & 128 \\
-Carnevale22     & T-cell fitness (adenosine)     & KO      & 18{,}861 $\rightarrow$ 18{,}224 & 943 $\rightarrow$ 868 & 4.8\% & 128 \\
-Scharenberg22   & Lysosomal choline recycling    & KO      &  1{,}061 $\rightarrow$  1{,}029 &  53 $\rightarrow$  49 & 4.8\% &  32 \\
-Steinhart       & GD2 surface expression (CAR-T) & CRISPRa & 18{,}797 $\rightarrow$ 18{,}144 & 149 $\rightarrow$ 145 & 0.8\% & 128 \\
-K562-Essential  & K562 essentiality              & KO      &     623 $\rightarrow$      623 &  63 $\rightarrow$  63 & 10.1\% & 32 \\
-K562-GWPS       & K562 genome-wide fitness       & KO      &  9{,}193 $\rightarrow$  9{,}193 & 924 $\rightarrow$ 924 & 10.1\% & 128 \\
+IFN-$\gamma$    & IFN-$\gamma$ production$^\ast$          & CRISPRa/i & 18{,}418 $\rightarrow$ 17{,}785 & 920 $\rightarrow$ 802 & 4.5\% & 128 \\
+IL-2            & IL-2 production$^\ast$                  & CRISPRa/i & 18{,}939 $\rightarrow$ 18{,}273 & 654 $\rightarrow$ 481 & 2.6\% & 128 \\
+Sanchez21       & Tau change, \emph{either} direction     & KO        & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 859 & 4.8\% & 128 \\
+Sanchez21 (dn)  & Tau \emph{decrease}                     & KO        & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 871 & 4.9\% & 128 \\
+Carnevale22     & T-cell efficacy (adenosine)             & KO        & 18{,}861 $\rightarrow$ 18{,}224 & 943 $\rightarrow$ 868 & 4.8\% & 128 \\
+Scharenberg22   & Lysosomal choline recycling                   & KO        &  1{,}061 $\rightarrow$  1{,}029 &  53 $\rightarrow$  49 & 4.8\% &  32 \\
+Steinhart       & \textbf{Resisting T-cell exhaustion}    & CRISPRa  & 18{,}797 $\rightarrow$ 18{,}144 & 149 $\rightarrow$ 145 & 0.8\% & 128 \\
+K562-Essential  & Strong transcriptomic response$^\ddagger$     & CRISPRi   &     623 $\rightarrow$      623 &  63 $\rightarrow$  63 & 10.1\% & 32 \\
+K562-GWPS       & Strong transcriptomic response$^\ddagger$     & CRISPRi   &  9{,}193 $\rightarrow$  9{,}193 & 924 $\rightarrow$ 924 & 10.1\% & 128 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -108,7 +117,7 @@ benchmark is the same and the method is not.
   \\[2pt]
   $^\dagger$\textbf{B is not a pure-LLM baseline.} When the LLM names too few genes that exist in the
   pool, the batch is padded from the static LOO-LightGBM ranking. Averaged over the five rounds that
-  padding is 19\% (IFN-$\gamma$), 19\% (IL-2), 46\% (Sanchez21-up), 32\% (Sanchez21-dn),
+  padding is 19\% (IFN-$\gamma$), 19\% (IL-2), 46\% (Sanchez21), 32\% (Sanchez21-dn),
   7\% (Carnevale22), 68\% (Scharenberg22), 43\% (Steinhart), \textbf{86\% (K562-Essential)} and
   0\% (K562-GWPS). B should be read as ``LLM, padded with a static ML prior'', and its two strongest
   entries (K562-Essential 0.559, Scharenberg22 0.478) are largely that prior rather than the LLM.
@@ -128,7 +137,7 @@ Dataset
 \midrule
 IFN-$\gamma$   & 0.029 & 0.168 & \second{0.183} & 0.100 & 0.160 & \best{0.190} \\
 IL-2           & 0.031 & 0.306 & \second{0.314} & 0.139 & 0.257 & \best{0.347} \\
-Sanchez21 (up) & 0.037 & 0.077 & \second{0.087} & 0.031 & 0.063 & \best{0.087} \\
+Sanchez21       & 0.037 & 0.077 & \second{0.087} & 0.031 & 0.063 & \best{0.087} \\
 Sanchez21 (dn) & 0.029 & 0.091 & \best{0.101}   & 0.078 & 0.071 & \second{0.099} \\
 Carnevale22    & 0.024 & 0.048 & 0.047          & 0.054 & \best{0.059} & \second{0.056} \\
 Scharenberg22  & 0.102 & 0.449 & 0.449          & 0.286 & \best{0.478} & \second{0.465} \\
@@ -244,7 +253,7 @@ Dataset & $\Delta$ C\,$-$\,Mem & $\Delta$ C\,$-$\,LLM & $\Delta$ C\,$-$\,ML & $\
 \midrule
 IFN-$\gamma$   & $+0.003$ & $+0.000$ & \drop{$-0.013$} & \drop{$-0.015$} \\
 IL-2           & \drop{$-0.013$} & $-0.002$ & $+0.002$ & $-0.005$ \\
-Sanchez21 (up) & $+0.004$ & $+0.010$ & \drop{$-0.010$} & $-0.008$ \\
+Sanchez21       & $+0.004$ & $+0.010$ & \drop{$-0.010$} & $-0.008$ \\
 Sanchez21 (dn) & $-0.005$ & $-0.003$ & \drop{$-0.010$} & $-0.004$ \\
 Carnevale22    & $-0.002$ & $-0.003$ & $+0.006$ & $+0.001$ \\
 Scharenberg22  & $+0.012$ & \gain{$+0.114$} & \drop{$-0.016$} & \gain{$+0.078$} \\
@@ -289,6 +298,16 @@ read carefully:
   branch is genuine LLM naming, and the gene-name ablation below independently confirms it.
 \end{itemize}
 
+\noindent
+Steinhart is also where one would \emph{predict} the LLM to matter most, for a reason visible in
+Table~\ref{tab:datasets}: it is the gain-of-function (CRISPRa) screen, asking which genes make CAR-T
+cells resist exhaustion \emph{when over-expressed}, whereas every DepMap feature we use is derived
+from \emph{knockout} screens. A gene that is dispensable when deleted can still be potent when
+over-expressed --- IRF4, one of Steinhart's strongest hits, is essential in only 6\% of DepMap cell
+lines --- so the ML prior has little to say there, and the LLM's biological knowledge is what fills
+the gap. Consistently, Steinhart has both the lowest hit rate of the nine screens (0.8\%) and the
+largest gene-name-shuffle penalty ($-0.084$).
+
 \paragraph{Gene-name semantics ($\Delta = -0.010$; $-0.084$ on Steinhart) --- the clean probe of LLM biology.}
 This ablation is immune to the padding confound in a way C\,$-$\,LLM is not: the branch is still
 present and still padded, but the LLM can no longer recognise the genes it is naming. Performance
@@ -321,7 +340,7 @@ Dataset & Tool-using agent & Pipeline (C) & $\Delta$ \\
 Scharenberg22  & \best{0.582} & 0.465 & \gain{$+0.116$} \\
 Carnevale22    & 0.044 & \best{0.056} & $-0.012$ \\
 IFN-$\gamma$   & 0.163 & \best{0.190} & $-0.027$ \\
-Sanchez21 (up) & 0.059 & \best{0.087} & $-0.029$ \\
+Sanchez21       & 0.059 & \best{0.087} & $-0.029$ \\
 Sanchez21 (dn) & 0.049 & \best{0.099} & $-0.050$ \\
 Steinhart      & 0.100 & \best{0.159} & $-0.059$ \\
 IL-2           & 0.264 & \best{0.347} & $-0.083$ \\
