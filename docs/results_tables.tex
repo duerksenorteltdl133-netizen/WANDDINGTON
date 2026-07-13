@@ -321,6 +321,53 @@ collapses on Steinhart ($-0.084$) and drops on K562-Essential ($-0.051$), so the
 on pathway-specific tasks is genuinely mediated by \emph{biological gene-name knowledge} rather than
 by the task description or by experimental feedback. Scharenberg22 again improves ($+0.078$).
 
+\subsection*{An accidental confirmation: the feature router already knew}
+
+The C-arm selects its feature set per screen. That router was tuned \emph{empirically}, by trying
+feature sets and keeping whatever scored best, long before we understood why. It converged on
+excluding \textbf{all four DepMap features} for exactly two screens --- Steinhart and K562-Essential
+--- because including them \emph{hurt}. The code comment recording this guessed at the reason
+(``DepMap disrupts online learning for GD2 biology''), and that guess was wrong: Steinhart does not
+measure GD2 biology at all (Table~\ref{tab:datasets}).
+
+The real reason is the one above. \textbf{Every DepMap feature is derived from knockout screens},
+and Steinhart is the one \emph{gain-of-function} (CRISPRa) screen: it asks which genes make CAR-T
+cells resist exhaustion \emph{when over-expressed}. A gene that is dispensable when deleted can be
+potent when over-expressed --- IRF4, among Steinhart's strongest hits, is essential in only 6\% of
+DepMap cell lines --- so a knockout-derived prior is not merely uninformative there, it is actively
+misleading, and the router learned to discard it.
+
+Reading the SHAP attributions back out confirms that this is what the model actually does:
+
+\begin{table}[H]
+\centering
+\caption{The ML model's most-used features, per screen (mean $|$SHAP$|$ over the genes it selected).
+DepMap essentiality dominates wherever it is available --- and is absent exactly where a
+knockout-derived prior does not transfer.}
+\label{tab:shap}
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lll}
+\toprule
+Screen & Perturbation & Top features used by the ML model \\
+\midrule
+IFN-$\gamma$, IL-2, Carnevale22, & loss-of-function & \textbf{depmap\_frac\_ess} (rank 1), then PPI / pLI \\
+Scharenberg22, K562-GWPS & & \\
+\midrule
+\textbf{Steinhart} & \textbf{gain-of-function} & PPI, STRING degree, pathway counts --- \\
+ & (CRISPRa) & \textbf{no DepMap feature at all} \\
+\textbf{K562-Essential} & loss-of-function & PPI, STRING degree --- \textbf{no DepMap feature} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+This closes the loop on why Steinhart is the screen where the LLM matters most: it is precisely the
+screen where the ML model's single strongest feature family has been removed, leaving it with weak
+topological signal --- and the LLM's T-cell biology is what fills the gap.
+(K562-Essential drops DepMap for a different reason: it \emph{is} a curated essentiality screen, so a
+pan-cancer essentiality prior is close to a restatement of the label and adds nothing.)
+
 % ─────────────────────────────────────────────────────────────────────────────
 \section*{Does giving the LLM tools help? (No.)}
 
