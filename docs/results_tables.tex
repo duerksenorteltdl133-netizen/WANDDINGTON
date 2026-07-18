@@ -350,29 +350,30 @@ that shortlist is itself a strong prior.
 
 \begin{table}[H]
 \centering
-\caption{Reasoning vs.\ recall. Hit ratio at round 5; all arms run together, same backend, $T=0$.
-The three right-hand columns isolate one ingredient each, holding the others fixed.
-A2 reproduces its committed values on all nine screens (max drift 0.022), confirming conditions match.}
+\caption{Reasoning vs.\ recall. Hit ratio at round 5, mean over \textbf{5 seeds}, same backend, $T=0$.
+The three right-hand columns isolate one ingredient each, holding the others fixed, and are
+\emph{seed-paired} (mean of per-seed differences) $\pm$ 1 s.d.\ --- not differences of means.
+A2 reproduces its committed 5-seed values on all nine screens (max drift 0.025).}
 \label{tab:reasoning}
 \footnotesize
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{lccccc|ccc}
 \toprule
- & \multicolumn{5}{c|}{hit@R5} & \multicolumn{3}{c}{value of \ldots} \\
+ & \multicolumn{5}{c|}{hit@R5 (mean)} & \multicolumn{3}{c}{value of \ldots (seed-paired $\pm$s.d.)} \\
 Screen & A0 & A0.5 & A1 & A2 & GBM & pool & \textbf{features} & name \\
  &  &  &  &  &  & \tiny A0.5$-$A0 & \tiny A1$-$A0.5 & \tiny A2$-$A1 \\
 \midrule
-IFN-$\gamma$        & 0.178 & 0.160 & 0.172 & 0.183 & 0.183 & $-$0.019 & $+$0.013 & $+$0.011 \\
-IL-2                & 0.351 & 0.316 & 0.343 & 0.351 & 0.314 & $-$0.035 & $+$0.027 & $+$0.008 \\
-Sanchez21           & 0.091 & 0.090 & 0.093 & 0.084 & 0.087 & $-$0.001 & $+$0.004 & $-$0.009 \\
-Sanchez21 (dn)      & 0.093 & 0.093 & 0.101 & 0.095 & 0.101 & $+$0.000 & $+$0.008 & $-$0.006 \\
-Carnevale22         & 0.060 & 0.051 & 0.059 & 0.053 & 0.047 & $-$0.009 & $+$0.008 & $-$0.006 \\
-Scharenberg22       & 0.367 & 0.531 & 0.592 & 0.469 & 0.449 & $+$0.163 & $+$0.061 & \textbf{$-$0.122} \\
-Steinhart           & 0.076 & 0.048 & 0.062 & 0.138 & 0.090 & $-$0.028 & $+$0.014 & \textbf{$+$0.076} \\
-K562-Essential      & 0.333 & 0.270 & 0.556 & 0.587 & 0.476 & $-$0.064 & \textbf{$+$0.286} & $+$0.032 \\
-K562-GWPS           & 0.343 & 0.300 & 0.374 & 0.347 & 0.273 & $-$0.043 & $+$0.075 & $-$0.027 \\
+IFN-$\gamma$   & 0.180 & 0.160 & 0.175 & 0.190 & 0.183 & $-$0.020\,{\tiny$\pm$.003} & $+$0.015\,{\tiny$\pm$.008} & $+$0.015\,{\tiny$\pm$.015} \\
+IL-2           & 0.351 & 0.316 & 0.343 & 0.347 & 0.314 & $-$0.035\,{\tiny$\pm$.000} & $+$0.027\,{\tiny$\pm$.007} & $+$0.004\,{\tiny$\pm$.004} \\
+Sanchez21      & 0.088 & 0.090 & 0.090 & 0.095 & 0.087 & $+$0.002\,{\tiny$\pm$.002} & $+$0.001\,{\tiny$\pm$.005} & $+$0.004\,{\tiny$\pm$.005} \\
+Sanchez21 (dn) & 0.091 & 0.093 & 0.099 & 0.095 & 0.101 & $+$0.002\,{\tiny$\pm$.002} & $+$0.006\,{\tiny$\pm$.001} & $-$0.003\,{\tiny$\pm$.005} \\
+Carnevale22    & 0.064 & 0.051 & 0.058 & 0.059 & 0.047 & $-$0.013\,{\tiny$\pm$.001} & $+$0.007\,{\tiny$\pm$.002} & $+$0.001\,{\tiny$\pm$.002} \\
+Scharenberg22  & 0.469 & 0.531 & 0.584 & 0.449 & 0.449 & $+$0.061\,{\tiny$\pm$.000} & $+$0.053\,{\tiny$\pm$.011} & \textbf{$-$0.135}\,{\tiny$\pm$.011} \\
+Steinhart      & 0.075 & 0.048 & 0.065 & 0.145 & 0.090 & $-$0.026\,{\tiny$\pm$.003} & $+$0.017\,{\tiny$\pm$.008} & \textbf{$+$0.080}\,{\tiny$\pm$.013} \\
+K562-Essential & 0.286 & 0.318 & 0.597 & 0.549 & 0.476 & $+$0.032\,{\tiny$\pm$.043} & \textbf{$+$0.279}\,{\tiny$\pm$.014} & $-$0.048\,{\tiny$\pm$.019} \\
+K562-GWPS      & 0.343 & 0.300 & 0.372 & 0.347 & 0.273 & $-$0.043\,{\tiny$\pm$.000} & $+$0.072\,{\tiny$\pm$.006} & $-$0.024\,{\tiny$\pm$.006} \\
 \midrule
-\textbf{Average}    & 0.210 & 0.206 & \textbf{0.261} & 0.257 & 0.224 & $-$0.004 & \textbf{$+$0.055} & $-$0.005 \\
+\textbf{Average} & 0.216 & 0.212 & \textbf{0.265} & 0.253 & 0.224 & $-$0.005 & \textbf{$+$0.053} & $-$0.012 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -381,26 +382,29 @@ K562-GWPS           & 0.343 & 0.300 & 0.374 & 0.347 & 0.273 & $-$0.043 & $+$0.07
 Three results, in order of how much they surprised us:
 
 \begin{enumerate}\itemsep2pt
-  \item \textbf{The shortlist is worth nothing} ($-0.004$, negative on 7 of 9). A1's gain is not an
+  \item \textbf{The shortlist is worth nothing} ($-0.005$, negative on 5 of 9). A1's gain is not an
   artefact of being handed ML-curated candidates.
-  \item \textbf{The features are worth $+0.055$, and positive on all nine screens} ($+0.004$ to
-  $+0.286$) --- the most consistent effect anywhere in this paper.
-  \item \textbf{The gene name is worth $-0.005$.} With every gene renamed to a meaningless identifier
-  and the structural features supplied, the system matches the real-name arm (0.261 vs.\ 0.257). On
-  average, \emph{the LLM does not need to know that a gene is IRF4; it needs the structure.}
+  \item \textbf{The features are worth $+0.053$, and positive on all nine screens} ($+0.001$ to
+  $+0.279$), every per-screen effect exceeding its seed s.d. --- the most consistent effect anywhere
+  in this paper.
+  \item \textbf{The gene name is worth $-0.012$.} With every gene renamed to a meaningless identifier
+  and the structural features supplied, the system \emph{matches or slightly exceeds} the real-name
+  arm (0.265 vs.\ 0.253). On average, \emph{the LLM does not need to know that a gene is IRF4; it needs
+  the structure.}
 \end{enumerate}
 
 \noindent
 That average, however, hides a bimodality that is the whole point:
 
 \begin{itemize}\itemsep2pt
-  \item \textbf{Steinhart: the name is worth $+0.076$}, the largest anywhere, and the features recover
-  almost nothing ($+0.014$; A1 at 0.062 is \emph{below} A0). This is exactly the screen of
+  \item \textbf{Steinhart: the name is worth $+0.080 \pm 0.013$}, the largest anywhere, and the
+  features recover almost nothing ($+0.017 \pm 0.008$; A1 at 0.065 is even \emph{below} A0 at 0.075,
+  and the two error bars do not come close to overlapping). This is exactly the screen of
   Table~\ref{tab:shap}: the one gain-of-function (CRISPRa) screen, where every DepMap feature is
   knockout-derived and does not transfer. The features we are able to hand the LLM are precisely the
   ones that are uninformative there, so nothing we supply substitutes for knowing what IRF4 does.
-  \item \textbf{Scharenberg22: the name is worth $-0.122$} --- it actively hurts, consistent with the
-  shuffle \emph{improving} that screen ($+0.078$).
+  \item \textbf{Scharenberg22: the name is worth $-0.135 \pm 0.011$} --- it actively hurts, consistent
+  with the shuffle \emph{improving} that screen.
 \end{itemize}
 
 \noindent
@@ -411,7 +415,7 @@ anchor-relative PPI / co-expression / pathway overlap plus constraint and essent
 them encodes gain-of-function T-cell biology. A richer feature table might close the Steinhart gap; a
 knockout-derived one provably cannot.
 
-One further calibration: \textbf{A0 (0.210) scores below the plain GBM (0.224)}. An LLM branch with
+One further calibration: \textbf{A0 (0.216) scores below the plain GBM (0.224)}. An LLM branch with
 nothing to say does not merely fail to help --- at a 0.4 fusion weight it drags the hybrid below the
 ML model it was meant to improve.
 
