@@ -52,8 +52,12 @@ Figures are produced by \texttt{python -m waddington\_select.analysis figures}.
   (loss of function); CRISPRa = activation (gain of function). Note that our DepMap features are
   \emph{all knockout-derived}, so they transfer least well to the gain-of-function screen (Steinhart)
   --- which is exactly where the LLM contributes most (Table~\ref{tab:ablation}).
-  $^\ast$BDA's prompt does not state which arm of the Schmidt CRISPRa/CRISPRi screens their data come
-  from. $^\ddagger$The two Perturb-seq screens define a hit as a strong \emph{transcriptome-wide}
+  $^\ast$The Schmidt IL-2 and IFN-$\gamma$ data are the \emph{CRISPRi} (loss-of-function) arm. Schmidt
+  et al.\ ran both CRISPRa and CRISPRi genome-wide; BDA sources these two screens from GeneDisco, whose
+  benchmark explicitly uses the \emph{interference} screens (Mehrjou et al., 2021, \S4.2.2--4.2.3),
+  although BDA's own task prompt does not state the arm. This matters here: it makes all eight non-Steinhart
+  screens loss-of-function, leaving Steinhart the lone gain-of-function screen (Table~\ref{tab:reasoning}).
+  $^\ddagger$The two Perturb-seq screens define a hit as a strong \emph{transcriptome-wide}
   response (top 10\%), not a specific phenotype at the top 5\% used for the other seven --- which is
   why their hit rates are higher.
   \\[3pt]
@@ -72,8 +76,8 @@ Figures are produced by \texttt{python -m waddington\_select.analysis figures}.
 \cmidrule(lr){4-5}
 Dataset & Task (BDA prompt) & Perturb. & Genes & Hits & Hit rate & Batch \\
 \midrule
-IFN-$\gamma$    & IFN-$\gamma$ production$^\ast$          & CRISPRa/i & 18{,}418 $\rightarrow$ 17{,}785 & 920 $\rightarrow$ 802 & 4.5\% & 128 \\
-IL-2            & IL-2 production$^\ast$                  & CRISPRa/i & 18{,}939 $\rightarrow$ 18{,}273 & 654 $\rightarrow$ 481 & 2.6\% & 128 \\
+IFN-$\gamma$    & IFN-$\gamma$ production$^\ast$          & CRISPRi   & 18{,}418 $\rightarrow$ 17{,}785 & 920 $\rightarrow$ 802 & 4.5\% & 128 \\
+IL-2            & IL-2 production$^\ast$                  & CRISPRi   & 18{,}939 $\rightarrow$ 18{,}273 & 654 $\rightarrow$ 481 & 2.6\% & 128 \\
 Sanchez21       & Tau change, \emph{either} direction     & KO        & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 859 & 4.8\% & 128 \\
 Sanchez21 (dn)  & Tau \emph{decrease}                     & KO        & 18{,}469 $\rightarrow$ 17{,}807 & 924 $\rightarrow$ 871 & 4.9\% & 128 \\
 Carnevale22     & T-cell efficacy (adenosine)             & KO        & 18{,}861 $\rightarrow$ 18{,}224 & 943 $\rightarrow$ 868 & 4.8\% & 128 \\
