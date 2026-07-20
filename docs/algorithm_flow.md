@@ -1,5 +1,10 @@
 # Waddington 基因选择算法 — 全流程
 
+> **流程图文件**:如果你的 Markdown 预览不渲染 mermaid,三张图已拆成独立的 `.mmd`(用 mermaid 插件直接打开):
+> [`algorithm_flow_01_overview.mmd`](algorithm_flow_01_overview.mmd)(全景) ·
+> [`algorithm_flow_02_select.mmd`](algorithm_flow_02_select.mmd)(select 内部) ·
+> [`algorithm_flow_03_frontend.mmd`](algorithm_flow_03_frontend.mmd)(对话入口)
+
 > **问题**:顺序式 CRISPR 筛选设计。一个筛选有 ~18,000 个基因,只有 ~2–10% 是"命中"。每轮只能测一批(128 个,小筛选 32 个),测完才知道哪些命中,据此挑下一批。
 > **目标**:5 轮内最大化命中率 `hit@R5`(= 累计命中 / 总命中)。
 > **核心系统 = C-arm,当前 hit@R5 = 0.256**(纯 ML 先验 0.217,加随机 0.066)。

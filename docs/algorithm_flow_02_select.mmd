@@ -1,0 +1,17 @@
+flowchart TB
+  hist["本轮输入<br/>任务描述 + 跨实验记忆(top-4, DeLM 验证) + 已揭示命中/非命中历史"]
+  hist --> ml
+  hist --> llm
+
+  ml["组件 A · 在线 ML（LightGBM）<br/>第 1 轮 = LOO 先验（还没数据）<br/>之后每轮：把已揭示的(基因,标签)<br/>加进训练集重新训练 → 重排所有基因<br/>【全系统最有价值的一环】"]
+  llm["组件 B · LLM 推理（Haiku 4.5, temp 0）<br/>点名它认为会命中的基因<br/>→ 匹配到基因池<br/>→ 不够就用静态排序补齐（记为 n_fallback，<br/>归因时不算 LLM 的功劳）"]
+
+  ml --> fuse
+  llm --> fuse
+
+  fuse{"融合<br/>（按融合路由）"}
+  fuse -->|weighted| w["score = w_ML·ml_score<br/>+ w_LLM·(基因是否被 LLM 点名)<br/>取 top-batch"]
+  fuse -->|two_stage| t["ML 先给 384 个候选短名单<br/>→ LLM 在里面挑最终 batch"]
+
+  w --> batch["✅ 下一批要测的基因"]
+  t --> batch

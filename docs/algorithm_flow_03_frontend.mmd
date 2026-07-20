@@ -1,0 +1,7 @@
+flowchart LR
+  desc["描述一个表型"] --> batch1["拿到一批基因"]
+  batch1 --> upload["上传本轮真实筛选读数<br/>MAGeCK gene_summary 或 Gene,Score CSV"]
+  upload --> ingest["ingest.py<br/>gaussian top-5% 判定命中"]
+  ingest --> next["下一轮自适应"]
+  next -.->|循环| upload
+  onboard["全新表型：从自己的基因池 onboard<br/>LLM 提议锚点 → 科学家审核 → 特征当场构建"] --> batch1

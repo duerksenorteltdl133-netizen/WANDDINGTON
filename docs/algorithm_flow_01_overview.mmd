@@ -1,0 +1,27 @@
+flowchart TB
+  subgraph prep["① 离线准备（每个基因一次）"]
+    direction LR
+    feat["特征向量<br/>gene-intrinsic（跨筛选不变）<br/>+ anchor-relative（相对表型锚点）<br/>+ DepMap 必需性"]
+    prior["LOO-LightGBM 先验<br/>用其他筛选的标签训练<br/>（无 LLM，已达 0.217）"]
+    feat --> prior
+  end
+
+  prep --> route
+
+  subgraph route["② 两个路由（跑之前定好）"]
+    direction LR
+    r1["融合路由 _classify(n, hit_rate)<br/>ml_heavy / two_stage / baseline<br/>→ 决定 w_ML : w_LLM"]
+    r2["特征路由 _get_feature_config<br/>gain-of-function / 必需性筛选<br/>→ 丢掉 DepMap"]
+  end
+
+  route --> loop
+
+  subgraph loop["③ 主循环 × 5 轮"]
+    direction TB
+    sel["C-arm.select()<br/>→ 一批 128 / 32 个基因"]
+    rev["湿实验 / 上传读数<br/>oracle.reveal() → 哪些是命中？"]
+    upd["C-arm.update()<br/>两个组件都吸收反馈"]
+    sel --> rev --> upd -->|下一轮| sel
+  end
+
+  loop --> out["hit@R5 + 每基因解释报告（SHAP 归因）"]
