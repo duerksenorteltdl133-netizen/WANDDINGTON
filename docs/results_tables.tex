@@ -416,12 +416,57 @@ So ``reason, don't recall'' is achievable and essentially free on eight of nine 
 impossible on the one screen where biology is doing real work. We read this as a limit of what our
 feature table \emph{contains}, not as proof that reasoning cannot work: our features are
 anchor-relative PPI / co-expression / pathway overlap plus constraint and essentiality, and none of
-them encodes gain-of-function T-cell biology. A richer feature table might close the Steinhart gap; a
-knockout-derived one provably cannot.
+them encodes the specific T-cell biology Steinhart rewards. The obvious reading of the bullet above ---
+that Steinhart is special \emph{because} it is the gain-of-function screen --- is tempting, and wrong:
+we tested it directly (next), and perturbation modality does not explain it.
 
 One further calibration: \textbf{A0 (0.216) scores below the plain GBM (0.224)}. An LLM branch with
 nothing to say does not merely fail to help --- at a 0.4 fusion weight it drags the hybrid below the
 ML model it was meant to improve.
+
+\subsection*{Testing the explanation: is it the gain-of-function modality? (No.)}
+
+The story above rests on a sample of one: Steinhart is the only gain-of-function (CRISPRa) screen in
+the benchmark, so ``gain-of-function makes the gene name matter'' is a hypothesis fitted to a single
+point. We tested it. The same study that supplied our IL-2 and IFN-$\gamma$ screens (Schmidt et al.,
+2022) ran \emph{both} a CRISPRi and a CRISPRa genome-wide screen for each cytokine, so the CRISPRa arm
+is the matched gain-of-function counterpart of two screens we already have. We onboarded
+\texttt{IL2\_crispra} and \texttt{IFNG\_crispra} from that arm, keeping everything fixed except the
+modality: the same anchor-relative features (they are modality-agnostic --- activating vs.\ silencing
+IL-2 biology shares the same anchors), the same hit convention, an activation-framed task prompt
+(``genes that, when \emph{over-expressed via CRISPRa}, regulate IL-2 production''), and --- because
+these large screens would otherwise route to the LLM-suppressed \texttt{ml\_heavy} regime --- the same
+fusion weight as Steinhart ($w_{\mathrm{LLM}}=0.4$).
+
+If gain-of-function were the cause, the gene name should be worth $\approx\!+0.08$ here too. It is not:
+
+\begin{center}\small
+\begin{tabular}{lcc}
+\toprule
+Screen (gain-of-function, CRISPRa) & name value (A2$-$A1) & cf.\ its CRISPRi twin \\
+\midrule
+\texttt{IL2\_crispra}  & $+0.002 \pm 0.003$ & $-0.050$ \\
+\texttt{IFNG\_crispra} & $-0.004 \pm 0.001$ & $+0.013$ \\
+\midrule
+\emph{Steinhart} (reference) & \emph{$+0.080 \pm 0.013$} & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+On both new gain-of-function screens the gene name is worth nothing, an order of magnitude below
+Steinhart. \textbf{Perturbation modality does not explain Steinhart's name-dependence.} The
+corrected-prompt run barely moved these numbers from a first run with a placeholder prompt, so this is
+not an artefact of under-specifying the task; the name simply does not help here.
+
+What \emph{does} distinguish Steinhart is the shape of its hit set: 145 concentrated hits (0.8\%)
+dominated by textbook exhaustion regulators (IRF4, TOX, \ldots) that a language model knows cold,
+against $\sim$900 diffuse top-movers ($\sim$5\%) on each CRISPRa cytokine screen, where recognizable
+names are a small minority. Our loss-of-function-trained prior also transfers poorly to CRISPRa hits
+(hit@R5 $\approx 0.12$ vs.\ $0.35$ on the CRISPRi twin), so the whole system is weak there. We leave the
+hit-set-concentration hypothesis untested. The operational consequence is clear enough, though:
+\textbf{we do not route by modality} --- the structure-only reasoning mode stays an opt-in choice, not
+a default triggered by whether a screen is CRISPRa.
 
 \subsection*{An accidental confirmation: the feature router already knew}
 
