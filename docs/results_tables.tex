@@ -99,20 +99,58 @@ theirs and are not directly comparable to them.} Two differences matter:
 
 \begin{itemize}\itemsep2pt
   \item \textbf{We add a cross-experiment ML prior that BDA does not have.} Our LOO-LightGBM is
-  trained on the \emph{other} screens' hit labels using PPI / KEGG / pLI / DepMap features. That model
-  alone averages 0.217 --- already above the best LLM hit ratio BDA reports on the screens we share.
-  Our gains over BDA's published numbers should therefore be read as ``a cross-experiment prior helps
-  a lot'', not as ``our agent is a better agent''.
+  trained on the \emph{other} screens' hit labels using PPI / KEGG / pLI / DepMap features. Restricted
+  to the six screens we share with BDA, that model alone averages 0.187 (Table~\ref{tab:external}) ---
+  already well above BDA's best agent (0.127) and the best GeneDisco baseline (0.091), \emph{with no LLM
+  at all}. Our gains over BDA's published numbers should therefore be read as ``a cross-experiment prior
+  helps a lot'', not as ``our agent is a better agent''.
   \item \textbf{Different LLM and different baseline implementations} (we use Claude Haiku 4.5;
   BDA's headline model is Claude 3.5 Sonnet; our Coreset is our own implementation and scores
   differently from theirs, e.g.\ 0.100 vs.\ 0.066 on IFN-$\gamma$).
 \end{itemize}
 
 \noindent
-As a sanity check that the data and scoring are aligned, the \emph{random} baseline agrees closely
-with BDA's reported random N/E values (IL-2: 0.031 vs.\ 0.031; IFN-$\gamma$: 0.029 vs.\ 0.035;
-Sanchez21-dn: 0.029 vs.\ 0.034), while the method numbers diverge --- which is what one expects if the
-benchmark is the same and the method is not.
+As a partial check that the conventions align, our \emph{random} baseline agrees on some screens
+(IL-2 0.031 vs.\ 0.031; Steinhart 0.020 vs.\ 0.021) but --- because we re-derive the hit sets from the
+same top-5\% $\cap$ non-CEGv2 convention rather than copy them --- differs by up to 0.034 on others
+(Scharenberg22 0.102 vs.\ 0.136). Table~\ref{tab:external} is therefore an \emph{approximate} reference,
+not a controlled head-to-head; it holds up only because the gaps dwarf that imprecision.
+
+\begin{table}[H]
+\centering
+\caption{External reference on the six screens BDA and we share (Schmidt1/2 $=$ IFN-$\gamma$/IL-2,
+CAR-T $=$ Steinhart, plus Scharenberg22, Carnevale22, Sanchez21). Mean hit@R5 over the non-essential
+(N/E) evaluation, 5 rounds, same batch sizes throughout. \textbf{Prior-work rows are transcribed from
+Roohani et al.\ (2025), Table 1 --- we did not re-run them.} ``GeneDisco best-per-screen'' is an oracle
+taking the strongest of their eight baselines on each screen. Our random differs from theirs by up to
+0.034 (see above), so treat gaps below $\sim$0.03 as noise.}
+\label{tab:external}
+\small
+\begin{tabular}{llc}
+\toprule
+Method & Source & mean hit@R5 \\
+\midrule
+Random                                        & BDA (transcribed) & 0.049 \\
+Random                                        & ours              & 0.041 \\
+\midrule
+GeneDisco --- best single baseline (Coreset)  & BDA (transcribed) & 0.083 \\
+GeneDisco --- best-per-screen (oracle over 8) & BDA (transcribed) & 0.091 \\
+BioDiscoveryAgent --- Claude 3.5 Sonnet       & BDA (transcribed) & 0.127 \\
+\midrule
+LOO-LightGBM --- \textbf{no LLM} (ours)       & ours              & \textbf{0.187} \\
+Waddington C (ours)                           & ours              & \textbf{0.217} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+The \emph{ordering} is the point, not the exact values. Our cross-experiment prior alone --- a static
+LightGBM with no LLM --- exceeds BioDiscoveryAgent's strongest agent by $+0.060$ ($\sim$7$\times$ the
+random discrepancy), and BDA's best in turn roughly doubles the strongest GeneDisco baseline. Per the
+caveats above, our lead is an \emph{information} advantage: the LOO model sees the other screens' hit
+labels, which neither GeneDisco nor BDA has. The honest reading is a hierarchy of \emph{priors} ---
+diversity / uncertainty heuristics (GeneDisco) $<$ a strong LLM's parametric biology (BDA) $<$ a
+cross-experiment supervised prior (ours) --- not ``our agent beats their agent''.
 
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 2  Comprehensive method comparison
