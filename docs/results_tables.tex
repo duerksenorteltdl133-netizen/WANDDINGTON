@@ -162,6 +162,32 @@ agent''. One per-screen note consistent with the rest of the paper: the controll
 \emph{best relative to random} on Steinhart (0.117, above even our LOO's 0.076), the CRISPRa screen
 where parametric biology is exactly what the ML prior lacks.
 
+\begin{table}[H]
+\centering
+\caption{Per-screen breakdown behind Table~\ref{tab:external}. \textbf{BDA-ctrl} is our controlled run
+(Haiku 4.5, our eval); \textbf{BDA-trans} is transcribed (Sonnet 3.5). Our controlled BDA tracks the
+transcribed number closely on four of six screens (validating the reference) and falls below it on
+Scharenberg22 and Sanchez21 (where Haiku trails Sonnet). Our C beats the controlled agent on every
+screen; our LOO --- with no LLM --- beats it on five, the exception being Steinhart.}
+\label{tab:external_perscreen}
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lccccc}
+\toprule
+Screen & Random & BDA-ctrl & BDA-trans & LOO (no LLM) & \textbf{C (ours)} \\
+\midrule
+IFN-$\gamma$   & 0.029 & 0.097 & 0.107 & 0.168 & \textbf{0.190} \\
+IL-2           & 0.031 & 0.118 & 0.122 & 0.306 & \textbf{0.347} \\
+Steinhart      & 0.021 & 0.117 & 0.133 & 0.076 & \textbf{0.159} \\
+Scharenberg22  & 0.102 & 0.225 & 0.292 & 0.449 & \textbf{0.465} \\
+Carnevale22    & 0.024 & 0.045 & 0.044 & 0.048 & \textbf{0.056} \\
+Sanchez21      & 0.037 & 0.027 & 0.063 & 0.077 & \textbf{0.087} \\
+\midrule
+\textbf{Average} & 0.041 & 0.105 & 0.127 & 0.187 & \textbf{0.217} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 2  Comprehensive method comparison
 % ─────────────────────────────────────────────────────────────────────────────
