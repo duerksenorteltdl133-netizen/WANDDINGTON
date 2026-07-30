@@ -20,7 +20,7 @@
 \newcommand{\gain}[1]{\textcolor{blue}{#1}}
 
 \title{Waddington: a hybrid ML\,+\,LLM agent for sequential CRISPR gene selection\\
-\large Results tables and figures}
+\large Method, results, and figures}
 \date{}
 
 \begin{document}
@@ -31,6 +31,117 @@ All numbers in this document are computed directly from the frozen benchmark out
 (the JSON files under \texttt{workspace/results/sequential/}) by
 \texttt{waddington\_select.analysis}; no value is transcribed by hand.
 Figures are produced by \texttt{python -m waddington\_select.analysis figures}.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Method}
+
+\subsection*{Problem: sequential batch selection}
+
+A screen exposes a pool of $N \approx 18{,}000$ genes whose hit labels are hidden. In each of $R = 5$
+rounds the agent selects a batch of $B$ genes ($B = 128$; $B = 32$ on the two small screens,
+Scharenberg22 and K562-Essential), an oracle reveals hit / non-hit for exactly those genes, and the
+agent adapts before the next round. The objective is the round-5 \emph{hit ratio}
+\[
+  \mathrm{hit@R5} \;=\; \frac{\lvert \{\text{unique hits among the }5B\text{ selected genes}\}\rvert}{\text{total hits in the screen}},
+\]
+i.e.\ how much of the screen's biology is recovered on a fixed budget. The loop is simply
+\emph{select $\rightarrow$ reveal $\rightarrow$ update}, repeated five times; everything below concerns
+how a round's batch is chosen.
+
+\subsection*{Gene features and the cross-experiment prior}
+
+Each gene carries two families of features. \textbf{Gene-intrinsic} features are constant across screens:
+STRING network degree and hubness, total PPI weight, the pLI loss-of-function constraint, and KEGG /
+Reactome pathway counts. \textbf{Anchor-relative} features measure a gene's proximity to the
+\emph{phenotype's anchor genes} (a small seed set describing the screen's biology): PPI connectivity to
+the anchors (\texttt{g1\_ppi\_score}), ARCHS4 co-expression with them (\texttt{archs4\_coexpr}), and KEGG
+pathway overlap (\texttt{kegg\_overlap}). To these nine we append knockout-derived \textbf{DepMap}
+essentiality features. Anchor-relative features are modality-agnostic --- they depend on the phenotype's
+biology, not on the direction of perturbation --- a property the reason-vs-recall analysis
+(Table~\ref{tab:reasoning}) relies on.
+
+The \textbf{cross-experiment prior} is a leave-one-out (LOO) LightGBM classifier: to score a target
+screen it is trained on the \emph{other} screens' hit labels using the features above, with
+\texttt{scale\_pos\_weight} correcting the $\sim$5\% class imbalance (300 trees, learning rate 0.05, 31
+leaves). This prior --- with no LLM and no in-experiment data --- is what the external comparison
+(Table~\ref{tab:external}) shows already exceeds the strongest single-experiment baseline by $\sim$0.08,
+because it transfers labels across screens that GeneDisco and BioDiscoveryAgent cannot.
+
+\subsection*{The C-arm: online ML and an LLM, fused}
+
+Each round the C-arm forms a batch by combining two components that see the same revealed feedback.
+
+\paragraph{Component A --- online ML.} An adaptive LightGBM ranker. In round 1 it \emph{is} the LOO
+prior (no in-experiment data yet); from round 2 it is retrained on the LOO data \emph{plus} the
+in-experiment revealed $(\text{gene}, \text{label})$ pairs, once at least $8$ genes have been revealed,
+and re-ranks the whole pool by predicted hit probability. This online retraining is the single most
+valuable component (Table~\ref{tab:ablation}).
+
+\paragraph{Component B --- LLM reasoning.} A tool-less LLM (Claude Haiku 4.5, temperature $0$) is
+prompted with the task description, the top-4 most relevant distilled lessons from a cross-experiment
+memory of past screens (ranked by \texttt{\_rank\_memory\_by\_relevance}, and never including the target
+screen), and the revealed hit / non-hit history so far. It names genes; these are matched against the
+pool, and any shortfall is padded from the static LOO ranking --- padding that is tracked and never
+credited to the LLM (Table~\ref{tab:main}$^\dagger$).
+
+\paragraph{Fusion.} The two components are combined by a weighted score
+\[
+  \mathrm{score}(g) \;=\; w_{\mathrm{ML}}\cdot \mathrm{ml}(g) \;+\; w_{\mathrm{LLM}}\cdot \mathbf{1}[g \text{ named by the LLM}],
+\]
+and the top $B$ genes are taken; on one route the ML instead shortlists its top
+$\mathrm{SHORTLIST}=384$ candidates and the LLM picks $B$ from that shortlist. The weights and the route
+are set per screen, as follows.
+
+\subsection*{Two routing decisions, fixed up front}
+
+Before any round runs, two properties of the screen fix how it is handled.
+
+\noindent
+\textbf{Fusion routing} sets who decides, from the pool size $n$ and hit rate $hr$:
+
+\begin{center}\small
+\begin{tabular}{lll}
+\toprule
+Route & Condition & $w_{\mathrm{ML}} : w_{\mathrm{LLM}}$ \\
+\midrule
+\texttt{ml\_heavy}  & $n>15000$ and $2\%<hr<7\%$ (large, sparse) & $0.8 : 0.2$ \\
+\texttt{two\_stage} & $3000<n\le15000$ and $hr>8\%$ & ML shortlists, LLM picks \\
+\texttt{baseline}   & otherwise & $0.6 : 0.4$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+On large, sparse screens the ML prior is most reliable and the LLM is given only $0.2$ weight; smaller
+or denser screens give the LLM more say.
+
+\noindent
+\textbf{Feature routing} sets whether the knockout-derived DepMap features are used:
+
+\begin{center}\small
+\begin{tabular}{ll}
+\toprule
+Screen & DepMap features \\
+\midrule
+gain-of-function (CRISPRa) or curated-essentiality & \textbf{none} \\
+K562 perturb-seq / IL-2 / Sanchez21-down            & pan-cancer only \\
+all others                                          & pan-cancer + K562-specific \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+This router was tuned \emph{empirically} --- trying feature sets and keeping whatever scored best --- and
+only later understood: DepMap is knockout-derived, so it misleads on a gain-of-function screen, and a
+pan-cancer essentiality prior nearly restates the label of a curated essentiality screen. SHAP confirms
+the model uses exactly these features where they are kept and ignores them where they are dropped
+(Table~\ref{tab:shap}).
+
+\paragraph{Design principle.} Throughout, the LLM \emph{re-weights a calibrated model's candidates}
+rather than choosing genes freely. This is deliberate: the attribution analysis
+(Explainability, below) shows the LLM is a strong \emph{verifier} of the ML's picks but a weak
+\emph{proposer} on its own, which is why giving it more agency (its own tools, or letting it choose
+unaided) does not help.
 
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 1  Dataset statistics
