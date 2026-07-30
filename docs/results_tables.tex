@@ -111,23 +111,31 @@ then explain our lead:
 \end{itemize}
 
 \noindent
-To go beyond published numbers we \textbf{ran BioDiscoveryAgent's own no-tools agent on our benchmark}
---- same six screens, the same LLM as our C-arm (Claude Haiku 4.5), scored by our own oracle: a genuine
-controlled head-to-head. It reaches \textbf{0.105}, close to the 0.127 that Roohani et al.\ report for
-their headline Claude 3.5 Sonnet agent, which confirms the published reference is fair rather than an
-artefact of differing setups. GeneDisco's eight baselines we could not run (they need the GeneDisco
-package and their exact splits), so those rows stay transcribed; as a convention check, our random
-baseline agrees with theirs on some screens (IL-2 0.031 vs.\ 0.031) but differs by up to 0.034 on others
-(Scharenberg22 0.102 vs.\ 0.136), so treat transcribed gaps below $\sim$0.03 as noise.
+To go beyond published numbers we ran \textbf{both} prior methods on our benchmark. BioDiscoveryAgent's
+own no-tools agent, with the same LLM as our C-arm (Claude Haiku 4.5) and scored by our oracle, reaches
+\textbf{0.105} --- close to the 0.127 Roohani et al.\ report for their Sonnet 3.5 agent, confirming the
+reference is fair. GeneDisco is a benchmark of active-learning \emph{acquisition functions} (a surrogate
+retrained on the genes tested so far, plus a rule that picks the next batch), not a model, so we ported
+its acquisition rules verbatim from source onto \emph{our} feature table and oracle --- giving its
+methods our features and isolating the acquisition strategy, faithful to its essence that the surrogate
+sees only within-experiment labels (round 1, with no data, falls back to random, as its own loop does).
+Its best-per-screen reaches \textbf{0.113}, close to the transcribed 0.091.\footnote{Running GeneDisco's
+\emph{vanilla package} on our screens instead gives near-random results ($\sim$0.03), but that is an
+artefact of its weak native features (Achilles): there its surrogate has $\approx$0 rank correlation
+with the phenotype, which collapses every acquisition rule to random. Given our features the same rules
+work, so this reflects the feature set, not the algorithms.} As a convention check, our random baseline
+agrees with theirs on some screens (IL-2 0.031 vs.\ 0.031) but differs by up to 0.034 on others, so
+treat transcribed gaps below $\sim$0.03 as noise.
 
 \begin{table}[H]
 \centering
 \caption{The six screens BDA and we share (Schmidt1/2 $=$ IFN-$\gamma$/IL-2, CAR-T $=$ Steinhart, plus
 Scharenberg22, Carnevale22, Sanchez21). Mean hit@R5 over the non-essential (N/E) evaluation, 5 rounds,
-same batch sizes. The \textbf{BioDiscoveryAgent controlled} row is \emph{our run} of their agent
-(Haiku 4.5, our eval);$^\ast$ GeneDisco rows and the Sonnet-3.5 BDA row are transcribed from Roohani
-et al.\ (2025), Table 1. ``GeneDisco best-per-screen'' is an oracle over their eight baselines.\\[2pt]
-$^\ast$We route their LLM calls through our client (for auth) and use our model; unused tool
+same batch sizes. The two \textbf{controlled} rows are \emph{our runs} on our benchmark: BioDiscoveryAgent's agent
+(Haiku 4.5, our eval)$^\ast$ and GeneDisco's acquisition functions ported onto our feature table
+(best-per-screen over five rules). The transcribed rows are from Roohani et al.\ (2025), Table 1;
+``best-per-screen'' is an oracle over the acquisition functions.\\[2pt]
+$^\ast$We route BDA's LLM calls through our client (for auth) and use our model; unused tool
 dependencies are stubbed, the output parser is relaxed to tolerate a missing ``Solution:'' header, and a
 harness bug that discarded an unfilled final round is fixed. None of these touch the agent's reasoning
 or gene choices.}
@@ -140,8 +148,8 @@ Method & Source & mean hit@R5 \\
 Random                                        & BDA (transcribed) & 0.049 \\
 Random                                        & ours              & 0.041 \\
 \midrule
-GeneDisco --- best single baseline (Coreset)  & BDA (transcribed) & 0.083 \\
 GeneDisco --- best-per-screen (oracle over 8) & BDA (transcribed) & 0.091 \\
+\textbf{GeneDisco --- best-per-screen, controlled} & \textbf{ours (run)} & 0.113 \\
 BioDiscoveryAgent --- Claude 3.5 Sonnet       & BDA (transcribed) & 0.127 \\
 \textbf{BioDiscoveryAgent --- controlled}     & \textbf{ours (run)} & 0.105 \\
 \midrule
@@ -152,15 +160,19 @@ Waddington C (ours)                           & ours              & \textbf{0.21
 \end{table}
 
 \noindent
-The \emph{ordering} is the point. \textbf{Our cross-experiment prior alone --- a static LightGBM with
-no LLM (0.187) --- beats BioDiscoveryAgent's agent whether transcribed (0.127) or run by us (0.105)},
-and BDA in turn beats the strongest GeneDisco baseline. Our lead is an \emph{information} advantage: the
-LOO model sees the other screens' hit labels, which neither GeneDisco nor BDA has. The honest reading is
-a hierarchy of \emph{priors} --- diversity / uncertainty heuristics (GeneDisco) $<$ a strong LLM's
-parametric biology (BDA) $<$ a cross-experiment supervised prior (ours) --- not ``our agent beats their
-agent''. One per-screen note consistent with the rest of the paper: the controlled BDA does its
-\emph{best relative to random} on Steinhart (0.117, above even our LOO's 0.076), the CRISPRa screen
-where parametric biology is exactly what the ML prior lacks.
+The \emph{ordering} is the point. Run controlled on our benchmark, both prior methods land in the same
+place --- GeneDisco's active learning at 0.113, BioDiscoveryAgent's LLM agent at 0.105. \textbf{Our
+cross-experiment prior alone --- a static LightGBM with no LLM (0.187) --- nearly doubles either.} The
+gap is not acquisition cleverness or LLM quality: GeneDisco and BDA both learn only \emph{within the
+single experiment}, whereas our LOO transfers the other screens' hit labels. The honest reading is a
+hierarchy of \emph{information} --- learning inside one screen (GeneDisco active learning $\approx$ BDA
+agent $\approx$ 0.11) $<$ a cross-experiment supervised prior (0.187) $<$ that prior plus online
+adaptation and LLM verification (C, 0.256) --- not ``our agent beats their agent''. Two per-screen notes,
+both consistent with the rest of the paper: controlled BDA does its best relative to random on Steinhart
+(0.117, above even our LOO's 0.076), the CRISPRa screen where parametric biology is what the ML prior
+lacks; and GeneDisco's within-experiment active learning is \emph{not} weak everywhere --- on the
+high-hit-rate K562-Essential (outside the shared six) it reaches 0.651, above even our C --- it fails
+only where the hit rate is low and a prior matters most.
 
 \begin{table}[H]
 \centering
