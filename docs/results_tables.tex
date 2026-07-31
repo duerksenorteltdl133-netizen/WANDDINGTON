@@ -43,10 +43,13 @@ baseline (0.134). To place this against prior work we ran both relevant lineages
 under identical evaluation: BioDiscoveryAgent's LLM agent scores 0.105 and GeneDisco's active-learning
 acquisition functions 0.113 on the six shared screens --- yet our leave-one-out prior, a static model
 with \emph{no} LLM, reaches 0.187, beating both. The differentiator is therefore a cross-experiment
-prior, not the agent: both prior methods learn only within a single screen. Counterfactual attribution
-explains why the LLM helps at all --- it is a strong \emph{verifier} of the ML's candidates (genes both
-endorse hit at 21\% vs.\ the LLM's unilateral 10\%) but a weak proposer, so giving it tools, memory, or
-free choice does not help. Finally, replacing every gene name with an anonymous identifier and supplying
+prior, not the agent: both prior methods learn only within a single screen. A simple cross-screen
+hit-frequency baseline matches the learned prior, so most of this transferred signal is recurrent hits
+and generic essentiality, not novel phenotype-specific biology. Counterfactual attribution explains why
+the LLM helps at all --- it is a strong \emph{verifier} but a weak proposer: after adjusting for the ML
+score, endorsement still predicts hits (adjusted odds ratio $1.68$, $95\%$ CI $[1.05, 2.52]$),
+concentrated in the top ML-score tertile where endorsed genes hit at $43.1\%$ vs.\ $17.4\%$; so giving
+the LLM tools, memory, or free choice does not help. Finally, replacing every gene name with an anonymous identifier and supplying
 only structural features leaves accuracy unchanged (features $+0.053$ on all nine screens; the gene name
 $\approx 0$), so the signal lives in the structure, not in memorised gene identity --- indeed a trivial
 linear rule on the same features matches the LLM here, so this is structure-sufficiency rather than LLM
@@ -239,7 +242,9 @@ independently names 118. The fused top-128 is $16$ \emph{both} (ML top-$k$ \emph
 VAV1, GRAP2, all ML${\approx}0.98$), ML-only $37/97$ ($38\%$; CD5, CD247, MAP4K1), LLM-only $6/15$ ($40\%$;
 the LLM lifted mid-ranked genes such as TSC2 and RHOA, ML${\approx}0.82$, into the batch). The round finds
 $57/128$ hits. In one round you can see the whole thesis: the batch is ML-dominated, and the LLM's mark
-concentrates hits in the small bucket both endorse.
+concentrates hits in the small bucket both endorse. (This single round is a mechanistic illustration, not
+a representative rate: its $88\%$ agreement hit rate runs above the $46.5\%$ pooled agreement rate of
+Table~\ref{tab:attrib}; the pattern, not the level, is the point.)
 
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 1  Dataset statistics
@@ -555,8 +560,9 @@ modality, cell line) --- never the target hit rate. Two variants: \textbf{global
 weight $w_{\mathrm{LLM}}$ chosen by leave-one-out over the other screens; and a \textbf{nested router},
 $w_{\mathrm{LLM}}=f(n_{\mathrm{pool}})$ with thresholds tuned only on the other screens. Both use a
 label-free metadata feature policy (DepMap dropped iff CRISPRa or curated-essentiality; cell-line-matched
-DepMap dropped on its own cell line). We also report a \textbf{leave-one-study-out} version that removes
-the target's whole same-study group from the selection set.
+DepMap dropped on its own cell line). We report leave-one-study-out at two strengths, kept distinct: one
+removes the same-study group only from the router's \emph{config selection}; the \emph{full} version
+additionally denies the cross-experiment \emph{prior} its siblings.
 
 \begin{table}[H]
 \centering
@@ -564,7 +570,8 @@ the target's whole same-study group from the selection set.
 chooses its weight and feature policy \emph{without} the target's realized hit rate; deltas are paired
 per-screen with screen-clustered bootstrap 95\% CIs (nine screens). The leakage-free variants match or
 slightly exceed the shipped hit-rate-routed C-arm and beat the LOO prior on 8--9 of 9 screens --- so the
-routing's use of a test-set statistic is not what produces the result. Reproduce with
+routing's use of a test-set statistic is not what produces the result. The last row is the strict test
+that also denies the prior its siblings (\S below). Reproduce with
 \texttt{python -m waddington\_select.analysis.router\_analysis}.}
 \label{tab:honest_router}
 \small
@@ -578,10 +585,16 @@ Routed C (shipped; \emph{uses realized $hr$}) & 0.256 & $+0.039$\,{\tiny$[.019,.
 \midrule
 \textbf{Global-fixed} (honest)               & \textbf{0.264} & $+0.047$\,{\tiny$[.025,.071]$}\,9/0/0 & $+0.008$\,{\tiny$[\!-\!.013,.031]$}\,6/0/3 \\
 \textbf{Nested router} (honest)              & 0.260 & $+0.043$\,{\tiny$[.021,.069]$}\,9/0/0 & $+0.004$\,{\tiny$[\!-\!.017,.029]$}\,5/0/4 \\
-Global-fixed, leave-one-study-out            & 0.262 & $+0.045$\,{\tiny$[.021,.070]$}\,8/0/1 & $+0.006$\,{\tiny$[\!-\!.015,.030]$}\,4/0/5 \\
-Nested router, leave-one-study-out           & 0.258 & $+0.041$\,{\tiny$[.017,.067]$}\,8/0/1 & $+0.002$\,{\tiny$[\!-\!.020,.026]$}\,3/0/6 \\
+Study-excluded \emph{policy selection}       & 0.262 & $+0.045$\,{\tiny$[.021,.070]$}\,8/0/1 & $+0.006$\,{\tiny$[\!-\!.015,.030]$}\,4/0/5 \\
+Study-excluded policy selection, nested      & 0.258 & $+0.041$\,{\tiny$[.017,.067]$}\,8/0/1 & $+0.002$\,{\tiny$[\!-\!.020,.026]$}\,3/0/6 \\
+\midrule
+\textbf{Full leave-one-study-out} (policy \emph{and} prior) & 0.239 & $+0.041^{\dagger}$\,{\tiny$[.014,.078]$}\,7/0/2 & --- \\
 \bottomrule
-\end{tabular}
+\end{tabular}\\[2pt]
+{\footnotesize $^{\dagger}$For this row the prior is also denied its siblings, so the matched reference is
+the \emph{sibling-excluded} LOO ($0.199$), not the standard LOO; against the standard LOO ($0.217$) it is
+$+0.022$ {\tiny$[\!-\!.004,.052]$}. The paired ``vs.\ routed C'' cell is omitted because routed C keeps
+its siblings (not a matched comparison).}
 \end{table}
 
 \noindent
@@ -1167,7 +1180,10 @@ A logistic fit on the pooled genes puts a number on it: with the within-screen M
 screen fixed effects in the model, LLM endorsement carries an independent odds ratio of
 $\mathbf{1.68}$ (screen-clustered bootstrap $95\%$ CI $[1.05, 2.52]$, $n=4{,}160$ genes over eight
 screens). The interval excludes $1$, so endorsement predicts hits \emph{after} adjusting for the ML
-score --- the agreement effect is not merely a restatement of ``high ML score.'' But the tertile split
+score --- the agreement effect is not merely a restatement of ``high ML score.'' With only eight clusters
+we also checked leave-one-screen-out: dropping each screen in turn keeps the adjusted OR between
+$\mathbf{1.39}$ and $\mathbf{1.87}$ (all $>1$), and removing Steinhart --- the natural worry, being the
+LLM's best screen --- leaves it at $1.65$, so no single screen drives it. But the tertile split
 is the sharper statement: the LLM is a verifier of \emph{confident} ML candidates specifically, adding
 nothing where the ML is unsure and confirming strongly where it is not. That is exactly the regime a
 fixed-fusion policy exploits and a free agent discards.
