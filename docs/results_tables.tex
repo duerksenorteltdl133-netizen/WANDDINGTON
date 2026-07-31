@@ -251,6 +251,27 @@ concentrates hits in the small bucket both endorse. (This single round is a mech
 a representative rate: its $88\%$ agreement hit rate runs above the $46.5\%$ pooled agreement rate of
 Table~\ref{tab:attrib}; the pattern, not the level, is the point.)
 
+\subsection*{The conversational interface}
+
+A scientist drives Waddington in natural language rather than by editing config. A lightweight intent
+router (itself an LLM call) parses each free-text message into a structured action --- \texttt{suggest}
+one batch, run an interactive \texttt{experiment} campaign, \texttt{simulate} end-to-end,
+\texttt{register} a new phenotype, or \texttt{chat} --- and extracts the phenotype, batch size, number of
+rounds, the run mode, and any genes the scientist reports as hits or non-hits in that message. An
+\texttt{experiment} then runs the round loop conversationally: the system proposes a batch, the scientist
+commits, outcomes are revealed --- either by the benchmark oracle or, in \emph{upload} mode, by the
+scientist supplying their own screen readout (a MAGeCK or CSV file, from which hits are derived) --- and
+the revealed hits and non-hits become cross-round state that conditions the next proposal. Biology outside
+the nine benchmark screens is handled by \texttt{register} (phenotype name, task, measurement, seed
+genes), after which the same pipeline ranks it.
+
+Crucially, the conversational LLM is confined to \emph{intake and narration}: every gene choice is made
+by the deterministic ML\,+\,LLM selector above, never by the chat model. So the interface adds
+natural-language control (goal, budget, round-by-round feedback, new phenotypes) without relaxing the
+ML-calibration constraint that the rest of this paper argues for. We describe this interface as a system
+component and do not benchmark it; features such as candidate veto or rationale-on-demand are natural
+extensions we have not yet built.
+
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 1  Dataset statistics
 % ─────────────────────────────────────────────────────────────────────────────
