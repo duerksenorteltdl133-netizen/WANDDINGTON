@@ -41,8 +41,9 @@ explains why the LLM helps at all --- it is a strong \emph{verifier} of the ML's
 endorse hit at 21\% vs.\ the LLM's unilateral 10\%) but a weak proposer, so giving it tools, memory, or
 free choice does not help. Finally, replacing every gene name with an anonymous identifier and supplying
 only structural features leaves accuracy unchanged (features $+0.053$ on all nine screens; the gene name
-$\approx 0$), so the system reasons over structure rather than recalling memorised biology --- an opt-in
-mode we ship.
+$\approx 0$), so the signal lives in the structure, not in memorised gene identity --- indeed a trivial
+linear rule on the same features matches the LLM here, so this is structure-sufficiency rather than LLM
+reasoning per se. We ship the anonymized mode as an opt-in.
 \end{abstract}
 
 \noindent
@@ -674,6 +675,20 @@ Three results, in order of how much they surprised us:
   the structure.}
 \end{enumerate}
 
+\paragraph{Is this the LLM \emph{reasoning}, or would any rule do?} A1 hands the LLM the feature vectors
+and lets it induce a decision boundary. To test whether the \emph{LLM} is what matters, we replace it
+with the most trivial boundary imaginable and change nothing else: score each candidate by its
+projection onto the (hit-centroid $-$ non-hit-centroid) axis in the identical anonymized feature space,
+take the top $B$, no language model (round~1 falls back to the static ranking, exactly as A1 pads). This
+one-line rule scores \textbf{0.268} averaged over the nine screens --- it \emph{matches}, and marginally
+exceeds, A1's 0.265, screen by screen (K562-Essential 0.587 vs.\ 0.597, Scharenberg22 0.571 vs.\ 0.584,
+Steinhart 0.083 vs.\ 0.065, IL-2 0.351 vs.\ 0.343). So A1 is \textbf{not} evidence that the LLM reasons:
+the value is that the structural features are linearly separable, and a centroid rule extracts it as
+well as a language model does. What the decomposition establishes is therefore narrower --- and cleaner
+--- than ``the LLM reasons'': it is that \emph{the gene name is dispensable once the structure is
+supplied}, with the LLM merely one (here interchangeable, and strictly unnecessary) way to map that
+structure to a choice.
+
 \noindent
 That average, however, hides a bimodality that is the whole point:
 
@@ -689,9 +704,9 @@ That average, however, hides a bimodality that is the whole point:
 \end{itemize}
 
 \noindent
-So ``reason, don't recall'' is achievable and essentially free on eight of nine screens, and
-impossible on the one screen where biology is doing real work. We read this as a limit of what our
-feature table \emph{contains}, not as proof that reasoning cannot work: our features are
+So substituting structure for the gene name is achievable and essentially free on eight of nine
+screens, and impossible on the one screen where biology is doing real work. We read this as a limit of
+what our feature table \emph{contains}, not as proof that structure cannot suffice: our features are
 anchor-relative PPI / co-expression / pathway overlap plus constraint and essentiality, and none of
 them encodes the specific T-cell biology Steinhart rewards. The obvious reading of the bullet above ---
 that Steinhart is special \emph{because} it is the gain-of-function screen --- is tempting, and wrong:
