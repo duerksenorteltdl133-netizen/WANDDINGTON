@@ -594,6 +594,19 @@ prior --- the paper's actual claim --- is $+0.04$ to $+0.047$ with a CI excludin
 every variant, including leave-one-study-out. We therefore keep $0.256$ as the shipped system's number
 but rest no claim on the router: the leakage-free configuration is at least as good.
 
+\paragraph{The stricter test: deny the prior its siblings.} The variants above route honestly but still
+let the cross-experiment prior \emph{train on} same-study sibling screens. The strongest
+leave-one-study-out also removes the sibling from the prior itself. This does bite: the mean falls from
+$0.264$ to $\mathbf{0.239}$, almost entirely on two screens that lose an informative sibling ---
+K562-Essential $0.587\!\rightarrow\!0.444$ (its Perturb-seq twin) and IL-2 $0.358\!\rightarrow\!0.308$
+(IFN-$\gamma$). But this handicaps only the numerator. The identical removal drops the bare LOO prior in
+lockstep ($0.243\!\rightarrow\!0.199$; the sibling-excluded prior of the ``what the prior learns''
+analysis). Compared \emph{like-for-like} --- both the full system and the prior denied their siblings ---
+the C-arm still beats the prior by $\mathbf{+0.041}$ (screen-clustered $95\%$ CI $[0.014, 0.078]$,
+winning 7 of 9). So the same-study structure inflates the \emph{absolute} hit rates but not the
+C-over-prior increment that is the actual claim: that increment comes from within-screen online
+adaptation and LLM verification, which no sibling supplies.
+
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.82\linewidth]{01_discovery_curves.png}
