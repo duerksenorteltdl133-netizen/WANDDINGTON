@@ -1,33 +1,28 @@
-# Waddington 文档索引
+# Waddington 文档
 
-每个版本是一个独立子目录，包含该阶段的完整设计文档。
+Waddington 是一个用于**序贯 CRISPR 基因扰动实验设计**的系统：每轮从约 1.8 万个基因中选一批
+（128，小屏 32）测试，读出命中/未命中，共 5 轮，目标是 `hit@R5`（累计唯一命中 / 总命中）。
+核心方法（C-arm）把一个**在线重训的 LightGBM 排序器**与一个**工具无关的 LLM**融合：LLM 只对
+校准过的 ML 候选做验证与重排，而非自由选基因。九个公开屏均值 `hit@R5 = 0.256`。
 
-## 版本列表
+## 文档索引
 
-| 版本 | 日期 | 核心定位 | 主要模块 |
-|------|------|---------|---------|
-| [v1](v1/) | 2026-06-08 | 代码复现助手 + 科学记忆 | L1-L3 / RFS / Protocol Oracle / SKILL / KG |
-| [v2](v2/) | 2026-06-11 | 基因扰动实验设计 Agent | G1 GeneRanker / G2 Planner / G3 NegativeFilter / G4 PhenotypeMapper |
+| 文档 | 内容 |
+|------|------|
+| [results_tables.pdf](results_tables.pdf) / [.tex](results_tables.tex) | **主文档 —— 论文**：方法、数据集、结果、消融、可解释性、稳健性、局限。所有数字由 `workspace/results/` 下冻结的 JSON 经 `waddington_select.analysis` 自动生成，无手工抄写。 |
+| [algorithm_flow.md](algorithm_flow.md) | 算法总体流程说明 + 三张 mermaid 图（`algorithm_flow_0{1,2,3}_*.mmd`：总览 / 选择回路 / 前端入口）。 |
+| [codex/suggest01.md](codex/suggest01.md) | 外部审稿意见（ChatGPT critique）。回应见论文的路由披露、诚实路由确认（Table 5）、条件化归因、anchor 泄漏审计与聚类 bootstrap 等小节。 |
 
-## 快速导航
+## 编译论文
 
-- **项目研究计划（总览）** → [WADDINGTON_PLAN.md](WADDINGTON_PLAN.md)
-- **V1 已实现模块详解** → [v1/MODULES.md](v1/MODULES.md)
-- **V1 创新点** → [v1/INNOVATION.md](v1/INNOVATION.md)
-- **keypaper 分析** → [v1/GENE_SELECTION_STRATEGY.md](v1/GENE_SELECTION_STRATEGY.md)
-- **V2 创新点 + 实测结果** → [v2/INNOVATION.md](v2/INNOVATION.md)
-- **V2 已实现模块详解** → [v2/MODULES.md](v2/MODULES.md)
-
-## 版本升级逻辑
-
+```bash
+cd docs
+pdflatex -interaction=nonstopmode results_tables.tex   # 跑两次以解析交叉引用
+pdflatex -interaction=nonstopmode results_tables.tex
 ```
-V1：用户给论文 → Waddington 跑代码 → RFS 评分
-                                ↑ 被动执行者
 
-V2：用户给表型目标 → GeneRanker 提议候选基因
-    → ExperimentPlanner 规划实验轮次
-    → Waddington 执行代码（V1 功能）
-    → NegativeFilter 区分技术失败/真实阴性
-    → 更新 KG + SKILL + 假说 → 下一轮迭代
-                                ↑ 主动设计者
-```
+## 关于历史文档
+
+早期逐版本开发日志（V1–V26、m6 消融、旧 `WADDINGTON_PLAN.md`、`skill_library_design.md` 等，描述的是
+已废弃的 RFS 评分 / 知识图谱 / SKILL 库方向）已从工作区移除，完整保留在 **git 历史**中
+（`git log --follow -- docs/`）。项目的当前状态与设计决策以论文（`results_tables.tex`）为准。
