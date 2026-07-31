@@ -210,6 +210,37 @@ rather than choosing genes freely. This is deliberate: the attribution analysis
 \emph{proposer} on its own, which is why giving it more agency (its own tools, or letting it choose
 unaided) does not help.
 
+\subsection*{The algorithm, and one worked round}
+
+\begin{center}
+\fbox{\begin{minipage}{0.94\linewidth}\small\ttfamily
+\begin{tabbing}
+xx\=xx\=xx\=\kill
+Input: pool G, rounds R, batch B, screen s \\
+Pre-experiment: (w\_ml, w\_llm) from metadata (n\_pool, modality, cell line) \\
+Prior p0 = LOO-LightGBM fit on OTHER screens' (features, label)\qquad// no target labels \\
+selected = \{\} \\
+for t = 1..R: \\
+\> ml = online\_ranker.scores(G)\qquad// t=1: p0; \ t>1: retrained on revealed pairs ($\ge$8) \\
+\> named = LLM.pick(task, memory[:4], revealed\_history)\quad// gene NAMES only; no ml score \\
+\> score(g) = w\_ml$\cdot$ml(g) + w\_llm$\cdot$[g $\in$ named] \\
+\> batch = top\_B(score, exclude=selected);\quad pad from static LOO if short\quad// pad not credited \\
+\> revealed = oracle.reveal(batch);\quad selected $\cup$= batch;\quad online\_ranker.add(revealed) \\
+Output: hit@R5 = |unique hits in selected| / total\_hits(s)
+\end{tabbing}
+\end{minipage}}
+\end{center}
+
+\noindent
+\textbf{A worked round (IFN-$\gamma$, round 1).} Route \texttt{ml\_heavy}
+($w_{\mathrm{ML}}{=}0.8$, $w_{\mathrm{LLM}}{=}0.2$), $B{=}128$; the ML ranks all 17{,}785 genes and the LLM
+independently names 118. The fused top-128 is $16$ \emph{both} (ML top-$k$ \emph{and} LLM-named), $97$
+\emph{ML-only}, $15$ \emph{LLM-only}. Outcomes: the \emph{both} bucket hits $14/16$ ($88\%$; e.g.\ ZAP70,
+VAV1, GRAP2, all ML${\approx}0.98$), ML-only $37/97$ ($38\%$; CD5, CD247, MAP4K1), LLM-only $6/15$ ($40\%$;
+the LLM lifted mid-ranked genes such as TSC2 and RHOA, ML${\approx}0.82$, into the batch). The round finds
+$57/128$ hits. In one round you can see the whole thesis: the batch is ML-dominated, and the LLM's mark
+concentrates hits in the small bucket both endorse.
+
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 1  Dataset statistics
 % ─────────────────────────────────────────────────────────────────────────────
