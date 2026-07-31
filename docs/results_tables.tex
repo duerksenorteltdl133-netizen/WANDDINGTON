@@ -26,11 +26,47 @@
 \begin{document}
 \maketitle
 
+\begin{abstract}
+\noindent
+Designing a genome-scale CRISPR screen means choosing, over a few rounds of $\sim$128 perturbations,
+which genes to test --- a batch active-learning problem. We present Waddington, a hybrid that fuses an
+online-retrained gradient-boosted ranker with a tool-less LLM, reaching $\mathrm{hit@R5}=0.256$ across
+nine public screens, above online ML alone (0.224), an LLM-only baseline (0.225), and a diversity
+baseline (0.134). To place this against prior work we ran both relevant lineages on our own benchmark
+under identical evaluation: BioDiscoveryAgent's LLM agent scores 0.105 and GeneDisco's active-learning
+acquisition functions 0.113 on the six shared screens --- yet our leave-one-out prior, a static model
+with \emph{no} LLM, reaches 0.187, beating both. The differentiator is therefore a cross-experiment
+prior, not the agent: both prior methods learn only within a single screen. Counterfactual attribution
+explains why the LLM helps at all --- it is a strong \emph{verifier} of the ML's candidates (genes both
+endorse hit at 21\% vs.\ the LLM's unilateral 10\%) but a weak proposer, so giving it tools, memory, or
+free choice does not help. Finally, replacing every gene name with an anonymous identifier and supplying
+only structural features leaves accuracy unchanged (features $+0.053$ on all nine screens; the gene name
+$\approx 0$), so the system reasons over structure rather than recalling memorised biology --- an opt-in
+mode we ship.
+\end{abstract}
+
 \noindent
 All numbers in this document are computed directly from the frozen benchmark outputs
 (the JSON files under \texttt{workspace/results/sequential/}) by
 \texttt{waddington\_select.analysis}; no value is transcribed by hand.
 Figures are produced by \texttt{python -m waddington\_select.analysis figures}.
+
+\section*{Related work}
+
+Two lines of work bear directly on ours. \textbf{Active-learning benchmarks for experimental design.}
+GeneDisco (Mehrjou et al., 2021) frames screen design as batch active learning and evaluates acquisition
+functions --- uncertainty, margin, coreset, $k$-means, BADGE --- over a surrogate model retrained on the
+genes tested so far. \textbf{LLM agents for biology.} BioDiscoveryAgent (Roohani et al., 2025) and
+PerTurboAgent prompt a large language model to plan rounds and name genes, optionally with
+retrieval / pathway-enrichment tools. What both share is that they learn \emph{within a single
+experiment}: the surrogate, or the LLM's in-context feedback, starts from scratch on each screen. Our
+contribution is orthogonal to the choice of acquisition rule or LLM: a \emph{cross-experiment}
+supervised prior (leave-one-out over related screens) combined with the LLM used as a \emph{verifier} of
+that prior's candidates rather than as a free agent. Running both lineages on our benchmark under
+identical evaluation (Table~\ref{tab:external}) places them together at $\sim$0.11, against our prior's
+0.187 --- so the gain we report over their published numbers should be read as ``a transferred prior
+helps a lot'', not ``a better agent''. We deliberately give the LLM no tools, a choice the attribution
+analysis (Explainability, below) justifies rather than assumes.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section*{Method}
