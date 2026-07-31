@@ -414,7 +414,7 @@ gap is not acquisition cleverness or LLM quality: GeneDisco and BDA both learn o
 single experiment}, whereas our LOO transfers the other screens' hit labels. The honest reading is a
 hierarchy of \emph{information}, all on these same six screens --- learning inside one screen (GeneDisco
 active learning $\approx$ BDA agent $\approx$ 0.11) $<$ a cross-experiment supervised prior (LOO 0.187)
-$<$ that prior plus online adaptation and LLM verification (C, 0.217 here; 0.256 over all nine screens,
+$<$ that prior plus online adaptation and LLM verification (C, 0.217 here; 0.255 over all nine screens,
 Table~\ref{tab:main}) --- not ``our agent beats their agent''. Two per-screen notes,
 both consistent with the rest of the paper: controlled BDA does its best relative to random on Steinhart
 (0.117, above even our LOO's 0.076), the CRISPRa screen where parametric biology is what the ML prior
@@ -567,7 +567,8 @@ nonetheless beats outright.
 \paragraph{Robustness: cluster on the screen, not the gene.} The nine screens are wildly heterogeneous
 (hit@R5 ranges from $0.06$ on Steinhart to $0.55$ on K562-Essential), so a bootstrap that treats the
 \emph{screen} as the resampling unit gives deliberately wide marginal intervals: C $0.256$
-$[0.151, 0.372]$, the LOO prior $0.217$ $[0.120, 0.323]$, Online ML $0.224$ $[0.128, 0.324]$ --- all
+$[0.151, 0.372]$ (this robustness analysis is on the legacy routed C; the final system's $0.255$ sits
+inside the interval), the LOO prior $0.217$ $[0.120, 0.323]$, Online ML $0.224$ $[0.128, 0.324]$ --- all
 overlapping. On an unpaired basis, with nine screens, no method is separable from another, and we do not
 claim otherwise. The comparison that survives is the \emph{paired} one, where the between-screen variance
 cancels:
@@ -713,6 +714,8 @@ Right: paired ablation deltas (Table~\ref{tab:ablation}). Colour states a fact a
 \caption{%
   Stepwise improvement in average hit ratio at round 5 (9 datasets, 5 seeds).
   Each row introduces one additional component over the previous configuration.
+  The final row is the \emph{legacy} routed C-arm (0.256), used here for the component decomposition; the
+  final leakage-free system (0.255, Table~\ref{tab:main}$^\ddagger$) is statistically identical.
 }
 \label{tab:progression}
 \begin{tabular}{llcc}
