@@ -278,10 +278,13 @@ treat transcribed gaps below $\sim$0.03 as noise.
 \centering
 \caption{The six screens BDA and we share (Schmidt1/2 $=$ IFN-$\gamma$/IL-2, CAR-T $=$ Steinhart, plus
 Scharenberg22, Carnevale22, Sanchez21). Mean hit@R5 over the non-essential (N/E) evaluation, 5 rounds,
-same batch sizes. The two \textbf{controlled} rows are \emph{our runs} on our benchmark: BioDiscoveryAgent's agent
-(Haiku 4.5, our eval)$^\ast$ and GeneDisco's acquisition functions ported onto our feature table
-(best-per-screen over five rules). The transcribed rows are from Roohani et al.\ (2025), Table 1;
-``best-per-screen'' is an oracle over the acquisition functions.\\[2pt]
+same batch sizes. The two \textbf{controlled} rows are \emph{our runs} on our benchmark: BioDiscoveryAgent's
+agent (Haiku 4.5, our eval)$^\ast$ and GeneDisco's acquisition functions ported onto our feature table.
+The transcribed rows are from Roohani et al.\ (2025), Table 1. Both ``best-per-screen'' entries are
+per-screen oracles over the acquisition rules considered --- the transcribed one over their \emph{eight}
+baselines, our controlled one over the \emph{five} rules we ported (uncertainty top / soft, margin,
+coreset, $k$-means-data; we omit BADGE, $k$-means-embedding, and DiscoBax, which need model internals we
+do not reproduce). The controlled oracle is thus over fewer rules, if anything understating it.\\[2pt]
 $^\ast$We route BDA's LLM calls through our client (for auth) and use our model; unused tool
 dependencies are stubbed, the output parser is relaxed to tolerate a missing ``Solution:'' header, and a
 harness bug that discarded an unfilled final round is fixed. None of these touch the agent's reasoning
@@ -312,9 +315,10 @@ place --- GeneDisco's active learning at 0.113, BioDiscoveryAgent's LLM agent at
 cross-experiment prior alone --- a static LightGBM with no LLM (0.187) --- nearly doubles either.} The
 gap is not acquisition cleverness or LLM quality: GeneDisco and BDA both learn only \emph{within the
 single experiment}, whereas our LOO transfers the other screens' hit labels. The honest reading is a
-hierarchy of \emph{information} --- learning inside one screen (GeneDisco active learning $\approx$ BDA
-agent $\approx$ 0.11) $<$ a cross-experiment supervised prior (0.187) $<$ that prior plus online
-adaptation and LLM verification (C, 0.256) --- not ``our agent beats their agent''. Two per-screen notes,
+hierarchy of \emph{information}, all on these same six screens --- learning inside one screen (GeneDisco
+active learning $\approx$ BDA agent $\approx$ 0.11) $<$ a cross-experiment supervised prior (LOO 0.187)
+$<$ that prior plus online adaptation and LLM verification (C, 0.217 here; 0.256 over all nine screens,
+Table~\ref{tab:main}) --- not ``our agent beats their agent''. Two per-screen notes,
 both consistent with the rest of the paper: controlled BDA does its best relative to random on Steinhart
 (0.117, above even our LOO's 0.076), the CRISPRa screen where parametric biology is what the ML prior
 lacks; and GeneDisco's within-experiment active learning is \emph{not} weak everywhere --- on the
@@ -959,9 +963,11 @@ nine qualifies.
 
 \paragraph{Other limitations.}
 \begin{itemize}\itemsep2pt
-  \item \textbf{Not a reproduction of BioDiscoveryAgent.} We use their data and their non-essential
-  convention, but never ran their agent; our numbers are not comparable to theirs (we add a
-  cross-experiment ML prior they do not have; Table~\ref{tab:datasets} and the following section).
+  \item \textbf{Not a verbatim reproduction of BioDiscoveryAgent.} We use their data and non-essential
+  convention. We \emph{did} run their agent as a controlled comparison (Table~\ref{tab:external}), but
+  with our backend and model (Haiku 4.5) and small harness adaptations, not their exact published
+  configuration; the controlled 0.105 is close to their reported 0.127 (Sonnet 3.5). Our headline gain
+  over them is a cross-experiment prior they do not have, not a better agent.
   \item \textbf{The B baseline is padded}, on some screens heavily
   (86\% on K562-Essential); it is not a pure-LLM baseline (Table~\ref{tab:main}$^\dagger$).
   \item \textbf{Genuine ML/LLM agreement is rare} ($n=101$), so its hit rate carries a wide interval
