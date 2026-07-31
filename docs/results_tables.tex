@@ -19,7 +19,14 @@
 \newcommand{\drop}[1]{\textcolor{red}{#1}}
 \newcommand{\gain}[1]{\textcolor{blue}{#1}}
 
-\title{Waddington: a hybrid ML\,+\,LLM agent for sequential CRISPR gene selection\\
+\title{Waddington: A Constrained Conversational ML\,--\,LLM Agent for Sequential CRISPR Gene Selection%
+\thanks{We keep the term \emph{agent} deliberately: Waddington runs a stateful sequential loop, observes
+experimental feedback each round, updates its actions across rounds, and is driven through a
+natural-language conversational interface with the researcher. \emph{Constrained conversational}
+signals what it is \emph{not} --- a freely planning tool-using agent. Its policy deliberately confines the
+LLM to \emph{verifying and re-ranking} candidates proposed by a calibrated ML model rather than choosing
+genes on its own; the paper's central finding (\S``a freely planning tool-using agent underperforms'')
+is that this constraint is what makes it work.}\\
 \large Method, results, and figures}
 \date{}
 
