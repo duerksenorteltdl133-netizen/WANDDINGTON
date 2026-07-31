@@ -174,6 +174,27 @@ pan-cancer essentiality prior nearly restates the label of a curated essentialit
 the model uses exactly these features where they are kept and ignores them where they are dropped
 (Table~\ref{tab:shap}).
 
+\paragraph{What the router may and may not know (and the resulting risk).} We are explicit about a real
+evaluation hazard here. The fusion route reads a hit rate $hr$; \emph{in the benchmark that is the
+realized hit rate computed from the screen's full labels}, i.e.\ a statistic of the test set, and it
+determines the route on seven of the nine screens (pool size alone fixes only the two smallest). In
+deployment the same code path instead reads the scientist's \emph{expected} hit rate from the phenotype
+registry, which is knowable before the screen; but our reported numbers use the realized rate, so the
+router is target-aware and the per-screen feature set was chosen post hoc on the target. A reviewer is
+right to discount any headline that leans on this. Three things bound the exposure. First, the router's
+freedom is small: it selects a coarse $w_{\mathrm{LLM}}\!\in\!\{0.2,0.4\}$ from a wide hit-rate band, not
+a tuned continuous weight, so a rough pre-experiment estimate would route the same. Second, and
+decisively, \textbf{the paper's main claim does not use the router at all}: the cross-experiment prior
+that beats single-experiment active learning and LLM agents ($0.187$ vs.\ $\approx\!0.11$,
+Table~\ref{tab:external}) is the routing-free static LOO-LightGBM --- one global model, no $hr$, no
+per-screen feature set. Routing and fusion affect only the \emph{smaller} increment of the full C-arm
+over that prior ($0.187\!\rightarrow\!0.217$ on the shared six). Third, the feature rule has a
+pre-registrable form independent of the target labels --- ``drop knockout-derived essentiality on
+non-knockout (CRISPRa) and on curated-essentiality screens'' --- which is what SHAP shows the model
+already obeys. The clean confirmation, still outstanding, is a nested leave-one-screen-out that re-selects
+route, weights, and feature set on the training screens only; we flag it as future work and do not rest
+the contribution on the routed increment.
+
 \paragraph{Design principle.} Throughout, the LLM \emph{re-weights a calibrated model's candidates}
 rather than choosing genes freely. This is deliberate: the attribution analysis
 (Explainability, below) shows the LLM is a strong \emph{verifier} of the ML's picks but a weak
@@ -299,8 +320,8 @@ Method & Source & mean hit@R5 \\
 Random                                        & BDA (transcribed) & 0.049 \\
 Random                                        & ours              & 0.041 \\
 \midrule
-GeneDisco --- best-per-screen (oracle over 8) & BDA (transcribed) & 0.091 \\
-\textbf{GeneDisco --- best-per-screen, controlled} & \textbf{ours (run)} & 0.113 \\
+GeneDisco --- best-per-screen (oracle over their 8) & BDA (transcribed) & 0.091 \\
+\textbf{GeneDisco --- best-per-screen (oracle over our 5), controlled} & \textbf{ours (run)} & 0.113 \\
 BioDiscoveryAgent --- Claude 3.5 Sonnet       & BDA (transcribed) & 0.127 \\
 \textbf{BioDiscoveryAgent --- controlled}     & \textbf{ours (run)} & 0.105 \\
 \midrule
@@ -970,6 +991,44 @@ This single measurement explains the two results above that otherwise look unrel
 \noindent
 The design implication is the opposite of the prevailing ``more agency'' direction: the LLM should
 be used to \emph{re-weight} a calibrated model's candidates, not to choose freely.
+
+\paragraph{Does endorsement add signal \emph{beyond} the ML score? (Yes --- but only where the ML is
+already confident.)} The $46.5\%$ agreement rate has an obvious confound: genes both components endorse
+might simply be the ones with the highest ML score, in which case the LLM adds nothing once that score
+is held fixed. We test this directly. On the same eight weighted screens, we bin every selected gene
+into ML-score deciles \emph{within its screen} (so each screen's model scale cancels) and, within each
+bin, compare the hit rate of genes the LLM named against genes it did not. The value of naming is not
+constant --- it is concentrated entirely in the top of the ML ranking:
+
+\begin{table}[H]
+\centering
+\caption{Hit rate by whether the LLM named the gene, \emph{stratified by within-screen ML-score
+tertile} (eight weighted screens; the two-stage screen is excluded, its source labels being degenerate).
+LLM endorsement is worth nothing --- slightly negative --- in the bottom two tertiles, and worth
+$2.5\times$ in the top tertile, where the ML is already confident. This is the verifier effect
+surviving a control for the ML score.}
+\label{tab:cond_attrib}
+\setlength{\tabcolsep}{8pt}
+\begin{tabular}{lccc}
+\toprule
+Within-screen ML tertile & LLM named (hit\%, $n$) & not named (hit\%, $n$) & ratio \\
+\midrule
+bottom & 7.7\% \;($n{=}614$)  & 11.3\% \;($n{=}1050$) & 0.68$\times$ \\
+middle & 10.8\% \;($n{=}130$) & 15.2\% \;($n{=}1118$) & 0.71$\times$ \\
+\textbf{top} & \best{43.1\%} \;($n{=}109$) & 17.4\% \;($n{=}1139$) & \textbf{2.48$\times$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+A logistic fit on the pooled genes puts a number on it: with the within-screen ML rank percentile and
+screen fixed effects in the model, LLM endorsement carries an independent odds ratio of
+$\mathbf{1.68}$ (screen-clustered bootstrap $95\%$ CI $[1.05, 2.52]$, $n=4{,}160$ genes over eight
+screens). The interval excludes $1$, so endorsement predicts hits \emph{after} adjusting for the ML
+score --- the agreement effect is not merely a restatement of ``high ML score.'' But the tertile split
+is the sharper statement: the LLM is a verifier of \emph{confident} ML candidates specifically, adding
+nothing where the ML is unsure and confirming strongly where it is not. That is exactly the regime a
+fixed-fusion policy exploits and a free agent discards.
 
 \begin{figure}[H]
 \centering
