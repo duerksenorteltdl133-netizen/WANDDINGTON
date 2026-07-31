@@ -396,6 +396,13 @@ and the picture is sobering.
   \item \textbf{A trivial baseline matches it.} Ranking a gene simply by \emph{how often it is a hit in
   the other screens} --- no model, no features --- also averages \textbf{0.243}. The LightGBM adds
   nothing over counting cross-screen hit recurrence.
+  \item \textbf{The anchor features leak, but are not load-bearing.} The three anchor-relative features
+  (proximity to a phenotype's seed genes) are built from a hand-picked anchor set that, by our own audit,
+  is \textbf{51\% composed of the screen's own hits} (42 of 82 anchors; e.g.\ 10/12 for IL-2, 9/10 for
+  K562-GWPS) --- genuine privileged information. Yet dropping \emph{every} anchor-relative feature costs
+  the prior only $0.015$ ($0.243\!\rightarrow\!0.228$): the anchor family is the weakest on its own
+  ($0.156$), and the label-free DepMap ($0.230$) and intrinsic-topology ($0.218$) features are what carry
+  it. The leak is real; its contribution to the headline is not.
 \end{itemize}
 
 \noindent
@@ -404,9 +411,9 @@ A novel-hit analysis explains the mechanism: the prior's gains sit on screens wh
 phenotype-specific hits (Carnevale22 80\% novel, Sanchez21 72\%). \textbf{The cross-experiment prior
 succeeds by exploiting recurrence and essentiality, not by discovering new phenotype-specific biology.}
 
-This qualifies but does not overturn the headline. Even after both corrections --- siblings excluded
-(0.182) and DepMap removed (0.219) --- the prior stays well above the single-experiment methods
-($\sim$0.11, Table~\ref{tab:external}). The honest claim is therefore narrower and, we think, more
+This qualifies but does not overturn the headline. Even after all three corrections --- siblings excluded
+(0.182), DepMap removed (0.219), or anchor features removed (0.228) --- the prior stays well above the
+single-experiment methods ($\sim$0.11, Table~\ref{tab:external}). The honest claim is therefore narrower and, we think, more
 useful: \emph{a screen's hits are substantially predictable from other screens' labels, largely through
 recurrence and essentiality} --- which no within-experiment active learner or LLM agent can see --- but
 this prior is not a discovery engine for genuinely new biology, and the online-ML and LLM-verification
@@ -468,6 +475,33 @@ on K562-GWPS (+0.075) and IFN-$\gamma$ (+0.007).
 Note that on the two screens where B edges ahead of C (Scharenberg22, K562-Essential) the LLM is
 barely doing the work: 68\% and 86\% of B's batch there is static-ML padding
 (Table~\ref{tab:main}$^\dagger$), so those entries do not support a claim about LLM reasoning.
+
+\paragraph{Robustness: cluster on the screen, not the gene.} The nine screens are wildly heterogeneous
+(hit@R5 ranges from $0.06$ on Steinhart to $0.55$ on K562-Essential), so a bootstrap that treats the
+\emph{screen} as the resampling unit gives deliberately wide marginal intervals: C $0.256$
+$[0.151, 0.372]$, the LOO prior $0.217$ $[0.120, 0.323]$, Online ML $0.224$ $[0.128, 0.324]$ --- all
+overlapping. On an unpaired basis, with nine screens, no method is separable from another, and we do not
+claim otherwise. The comparison that survives is the \emph{paired} one, where the between-screen variance
+cancels:
+
+\begin{center}\small
+\begin{tabular}{lccc}
+\toprule
+C $-$ baseline (paired, 9 screens) & mean $\Delta$ & 95\% CI (screen-clustered) & win/tie/loss \\
+\midrule
+vs.\ LOO prior     & $+0.039$ & $[+0.019, +0.062]$ & \textbf{9\,/\,0\,/\,0} \\
+vs.\ Online ML     & $+0.032$ & $[+0.012, +0.054]$ & 7\,/\,1\,/\,1 \\
+vs.\ LLM reasoning & $+0.031$ & $[+0.006, +0.062]$ & 6\,/\,0\,/\,3 \\
+vs.\ Coreset       & $+0.122$ & $[+0.066, +0.185]$ & \textbf{9\,/\,0\,/\,0} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Every paired interval excludes zero, and C beats the LOO prior on all nine screens. So the defensible
+statement is not ``C's mean is significantly higher'' --- with nine heterogeneous screens it is not ---
+but ``C improves on each baseline consistently, screen by screen.'' Reproduce with
+\texttt{python -m waddington\_select.\allowbreak analysis.\allowbreak clustered\_ci}.
 
 \begin{figure}[H]
 \centering
@@ -829,13 +863,17 @@ topological signal --- and the LLM's T-cell biology is what fills the gap.
 pan-cancer essentiality prior is close to a restatement of the label and adds nothing.)
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section*{Does giving the LLM tools help? (No.)}
+\section*{A freely planning tool-using agent underperforms the constrained pipeline}
 
 The natural next step from a pipeline is a \emph{tool-using agent} in the BioDiscoveryAgent /
 PerTurboAgent mould: let the LLM plan, call an ML-ranking tool and a pathway-enrichment tool, and
 commit a batch itself. We implemented exactly that (a task-specialised harness with a JSON action
 protocol; \texttt{ml\_rank} / \texttt{enrich} / \texttt{finish}; no agent framework) and benchmarked
-it against the pipeline on identical screens and budgets.
+it against the pipeline on identical screens and budgets. We state the scope up front: this is one
+action set, one prompt, one stopping rule and one budget, so the result below is evidence that \emph{a
+freely planning agent does not beat the constrained fusion policy here}, not that tools are useless in
+general --- a different action schema or a policy that cannot override a confident ML score could
+close the gap.
 
 \begin{table}[H]
 \centering
