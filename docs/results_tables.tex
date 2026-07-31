@@ -53,10 +53,11 @@ score, endorsement still predicts hits (adjusted odds ratio $1.68$, $95\%$ CI $[
 concentrated in the top ML-score tertile where endorsed genes hit at $43.1\%$ vs.\ $17.4\%$; so, in our
 tested setup (one action set, prompt, and budget), adding tools, explicit memory, or unconstrained action
 selection does not help. Finally, replacing every gene name with an anonymous identifier and supplying
-structural features instead matches the real-name condition on average (features $+0.053$ on all nine
-screens; the gene name $\approx 0$) --- though individual tasks such as Steinhart still benefit from
-gene-name semantics, and we cannot separate biological knowledge from memorisation. A trivial linear rule
-on the same features matches the LLM here, so this is structure-sufficiency, not LLM reasoning per se; we
+structural features instead matches the real-name condition on average, and \emph{still} matches after the
+anchor-relative features later identified as privileged are removed (structure vs.\ names, paired
+$-0.007$, $95\%$ CI $[\!-\!0.041, 0.029]$); a trivial linear rule on those features matches the LLM too,
+so this is \emph{structure-sufficiency}, not LLM reasoning per se. Individual tasks such as Steinhart
+still benefit from gene-name semantics, and we cannot separate biological knowledge from memorisation. We
 ship the anonymized mode as an opt-in.
 \end{abstract}
 
@@ -909,6 +910,16 @@ well as a language model does. What the decomposition establishes is therefore n
 --- than ``the LLM reasons'': it is that \emph{the gene name is dispensable once the structure is
 supplied}, with the LLM merely one (here interchangeable, and strictly unnecessary) way to map that
 structure to a choice.
+
+\paragraph{Do these features smuggle in privileged information?} The structural features include the
+anchor-relative ones the leakage audit flagged as privileged (51\% of anchors are themselves target
+hits). If ``structure replaces names'' rode on that leak, it should collapse once the anchor features are
+removed. It does not. Re-running the ladder in the anchor-free feature space, structure still matches
+names --- A1 $0.241$ vs.\ A2 $0.249$ (paired $-0.007$, $95\%$ CI $[\!-\!0.041, 0.029]$, indistinguishable)
+--- and the linear rule still matches the LLM ($0.257$; $+0.008$ vs.\ names). Removing the privileged
+features lowers both structure arms in step (they were the strongest single family), so the
+\emph{contrast} survives: the gene name remains dispensable even when the structure the LLM sees contains
+no target-hit leakage. (Reproduce with \texttt{WADDINGTON\_DROP\_ANCHOR\_FEATS=1}.)
 
 \noindent
 That average, however, hides a bimodality that is the whole point:
