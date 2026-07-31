@@ -37,7 +37,7 @@ is that this constraint is what makes it work.}\\
 \noindent
 Designing a genome-scale CRISPR screen means choosing, over a few rounds of $\sim$128 perturbations,
 which genes to test --- a batch active-learning problem. We present Waddington, a hybrid that fuses an
-online-retrained gradient-boosted ranker with a tool-less LLM, reaching $\mathrm{hit@R5}=0.255$ across
+online-retrained gradient-boosted ranker with a tool-less LLM, reaching $\mathrm{hit@R5}=0.251$ across
 nine public screens under a configuration fixed entirely from pre-experiment metadata --- no target
 statistic and no privileged features --- above online ML alone (0.224), an LLM-only baseline (0.225), and
 a diversity baseline (0.134). (An earlier target-aware routed variant scores an indistinguishable 0.256;
@@ -188,9 +188,9 @@ transfer unchanged.
 \paragraph{Why the reported system avoids the legacy router.} The legacy route reads the realized hit
 rate --- a statistic of the test set, determining the route on seven of the nine screens --- and keeps the
 privileged anchor features. That is precisely why the reported system uses neither. Fixing the weight and
-the feature policy from pre-experiment metadata and dropping the anchor features reaches $0.255$,
+the feature policy from pre-experiment metadata and dropping the anchor features reaches $0.251$,
 indistinguishable from the routed $0.256$ (paired $-0.001$), and still beats the routing-free LOO prior by
-$+0.038$ on 8 of 9 screens (\S\ref{sec:honest-router}). The main external claim never used the router
+$+0.034$ on 8 of 9 screens (\S\ref{sec:honest-router}). The main external claim never used the router
 anyway: the cross-experiment prior that beats single-experiment active learning and LLM agents ($0.187$
 vs.\ $\approx\!0.11$, Table~\ref{tab:external}) is the routing-free static LOO-LightGBM. We keep the legacy
 variant only because the detailed ablations, attribution, and SHAP were computed on it (statistically
@@ -394,7 +394,7 @@ gap is not acquisition cleverness or LLM quality: GeneDisco and BDA both learn o
 single experiment}, whereas our LOO transfers the other screens' hit labels. The honest reading is a
 hierarchy of \emph{information}, all on these same six screens --- learning inside one screen (GeneDisco
 active learning $\approx$ BDA agent $\approx$ 0.11) $<$ a cross-experiment supervised prior (LOO 0.187)
-$<$ that prior plus online adaptation and LLM verification (C, 0.217 here; 0.255 over all nine screens,
+$<$ that prior plus online adaptation and LLM verification (C, 0.217 here; 0.251 over all nine screens,
 Table~\ref{tab:main}) --- not ``our agent beats their agent''. Two per-screen notes,
 both consistent with the rest of the paper: controlled BDA does its best relative to random on Steinhart
 (0.117, above even our LOO's 0.076), the CRISPRa screen where parametric biology is what the ML prior
@@ -473,12 +473,26 @@ useful: \emph{a screen's hits are substantially predictable from other screens' 
 recurrence and essentiality} --- which no within-experiment active learner or LLM agent can see --- but
 this prior is not a discovery engine for genuinely new biology. We tested directly whether the
 within-screen components add value \emph{over} the raw recurrence count: starting both from the same
-single hit-frequency feature, adding online retraining and LLM verification moves the mean only from
-$0.243$ to $0.245$ (paired $+0.002$, screen-clustered $95\%$ CI $[\!-\!0.036, 0.038]$, winning 7 of 9
-screens) --- higher, but \textbf{inconclusive} at this sample size. So online adaptation and LLM
-verification measurably lift the \emph{feature-based} prior ($0.217\!\rightarrow\!0.255$, Table~5) but we
-cannot claim they beat a pure recurrence ranking. All numbers here are produced by
+single hit-frequency feature (5 seeds), adding online retraining and LLM verification moves the mean from
+$0.243$ to $0.239$ (paired $-0.004$, screen-clustered $95\%$ CI $[\!-\!0.046, 0.028]$; higher on 6 of 9
+screens but lower on average) --- \textbf{indistinguishable from, if anything slightly below}, the pure
+recurrence ranking. So online adaptation and LLM verification measurably lift the \emph{feature-based}
+prior ($0.217\!\rightarrow\!0.251$, Table~\ref{tab:honest_router}) but we cannot claim they beat a pure
+recurrence ranking. All numbers here are produced by
 \texttt{python -m waddington\_select.analysis.prior\_probes} and \texttt{.router\_analysis}.
+
+\paragraph{Recurrent vs.\ novel hits (exploratory).} A sharper question than mean hit@R5: can any method
+find hits that \emph{never} occur in the training screens --- biology recurrence cannot see? Splitting each
+screen's hits into recurrent (a hit in $\ge\!1$ other screen) and novel (never), $65\%$ of all hits are
+novel. By construction a hit-frequency ranking finds \textbf{none} of them (novel-recall $0.000$) while
+recovering $49.5\%$ of recurrent hits. The \emph{feature-based} LOO prior does better on novelty
+(novel-recall $\mathbf{0.105}$, recurrent $0.439$): its structural features flag a plausible hit even
+when the gene has never been a hit elsewhere. The full Waddington, however, does \emph{not} improve on
+this --- novel-recall $0.074$ (below the bare feature prior) with recurrent-recall $0.462$ (above it). So
+the within-screen components (online retraining $+$ LLM endorsement) shift selection \emph{toward}
+recurrent, high-confidence hits and slightly \emph{away} from novel ones --- consistent with the LLM
+acting as a verifier of confident candidates rather than a discoverer of new biology. We report this as
+exploratory (no tuning on it); \texttt{python -m waddington\_select.analysis.novel\_hit\_analysis}.
 
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 2  Comprehensive method comparison
@@ -491,10 +505,10 @@ cannot claim they beat a pure recurrence ranking. All numbers here are produced 
   \textbf{Bold} = best per row; \underline{underline} = second best.
   \\[2pt]
   $^\ddagger$\textbf{Column C is the final leakage-free Waddington} (metadata-only weight, no anchor
-  features; 3 seeds; \S\ref{sec:honest-router}), avg $0.255$. The detailed ablations, attribution, and
+  features; 5 seeds; \S\ref{sec:honest-router}), avg $0.251$. The detailed ablations, attribution, and
   SHAP that follow were computed on the statistically-identical legacy target-aware routed configuration
   (avg $0.256$; per-screen values in the reason-vs-recall table). Relative to the legacy variant the final
-  system trades a little on the gain-of-function screen Steinhart ($0.110$ vs.\ $0.159$, where the LLM
+  system trades a little on the gain-of-function screen Steinhart ($0.117$ vs.\ $0.159$, where the LLM
   weight and gene-name signal matter most) for gains on Scharenberg22 and K562-GWPS.
   \\[2pt]
   $^\dagger$\textbf{B is not a pure-LLM baseline.} When the LLM names too few genes that exist in the
@@ -518,36 +532,36 @@ Dataset
   & C: Waddington\\
   &&&&&& {\footnotesize (final)$^\ddagger$} \\
 \midrule
-IFN-$\gamma$   & 0.029 & 0.168 & \best{0.183}   & 0.100 & 0.160 & \second{0.175} \\
-IL-2           & 0.031 & 0.306 & \second{0.314} & 0.139 & 0.257 & \best{0.322} \\
-Sanchez21       & 0.037 & 0.077 & \best{0.087}  & 0.031 & 0.063 & \second{0.083} \\
-Sanchez21 (dn) & 0.029 & 0.091 & \best{0.101}   & 0.078 & 0.071 & \second{0.091} \\
-Carnevale22    & 0.024 & 0.048 & 0.047          & 0.054 & \second{0.059} & \best{0.070} \\
-Scharenberg22  & 0.102 & 0.449 & 0.449          & 0.286 & \second{0.478} & \best{0.551} \\
-Steinhart      & 0.021 & 0.076 & 0.090          & 0.090 & \best{0.152} & \second{0.110} \\
+IFN-$\gamma$   & 0.029 & 0.168 & \second{0.183} & 0.100 & 0.160 & \best{0.183} \\
+IL-2           & 0.031 & 0.306 & \second{0.314} & 0.139 & 0.257 & \best{0.343} \\
+Sanchez21       & 0.037 & 0.077 & \best{0.087}  & 0.031 & 0.063 & \second{0.078} \\
+Sanchez21 (dn) & 0.029 & \second{0.091} & \best{0.101} & 0.078 & 0.071 & 0.088 \\
+Carnevale22    & 0.024 & 0.048 & 0.047          & 0.054 & \second{0.059} & \best{0.065} \\
+Scharenberg22  & 0.102 & 0.449 & 0.449          & 0.286 & \second{0.478} & \best{0.490} \\
+Steinhart      & 0.021 & 0.076 & 0.090          & 0.090 & \best{0.152} & \second{0.117} \\
 K562-Essential & 0.254 & 0.492 & 0.476          & 0.270 & \second{0.559} & \best{0.571} \\
-K562-GWPS      & 0.065 & 0.247 & \second{0.273} & 0.156 & 0.225 & \best{0.319} \\
+K562-GWPS      & 0.065 & 0.247 & \second{0.273} & 0.156 & 0.225 & \best{0.324} \\
 \midrule
-\textbf{Average} & 0.066 & 0.217 & 0.224        & 0.134 & \second{0.225} & \best{0.255} \\
+\textbf{Average} & 0.066 & 0.217 & 0.224        & 0.134 & \second{0.225} & \best{0.251} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The final Waddington achieves the best average hit ratio (0.255), above the padded LLM baseline B
-($+0.030$) and the diversity baseline A ($+0.121$). It is best or second on every screen --- best on five
-(IL-2, Carnevale22, Scharenberg22, and both K562 screens) and a close second on three (IFN-$\gamma$,
-Sanchez21, Sanchez21-dn, trailing OnlineAdaptive by $\le 0.010$). The one clear give-up is
-\textbf{Steinhart}, where it trails the LLM baseline by $0.042$: that is the gain-of-function (CRISPRa)
-screen where gene-name semantics and a higher LLM weight help most, and the leakage-free global
-$w_{\mathrm{LLM}}{=}0.2$ forgoes both (the legacy routed variant scored $0.159$ there). Even that baseline
-is $43\%$ static-ML padding (Table~\ref{tab:main}$^\dagger$), so it is not evidence of LLM reasoning; the
-same padding caveat explains B's high marks on Scharenberg22 and K562-Essential, which the final system
-nonetheless beats outright.
+The final Waddington achieves the best average hit ratio (0.251), above the padded LLM baseline B
+($+0.026$) and the diversity baseline A ($+0.117$). It is best on five screens (IL-2, Carnevale22,
+Scharenberg22, and both K562 screens; and ties OnlineAdaptive for best on IFN-$\gamma$) and a close second
+on two (Sanchez21; Steinhart). It slips to third on Sanchez21-dn, trailing OnlineAdaptive and the LOO prior
+by $\le 0.013$. Its one clear give-up is \textbf{Steinhart}, where it trails the LLM baseline by $0.035$:
+that is the gain-of-function (CRISPRa) screen where gene-name semantics and a higher LLM weight help most,
+and the leakage-free global $w_{\mathrm{LLM}}{=}0.2$ forgoes both (the legacy routed variant scored $0.159$
+there). Even that baseline is $43\%$ static-ML padding (Table~\ref{tab:main}$^\dagger$), so it is not
+evidence of LLM reasoning; the same padding caveat explains B's high marks on Scharenberg22 and
+K562-Essential, which the final system nonetheless beats outright.
 
 \paragraph{Robustness: cluster on the screen, not the gene.} The nine screens are wildly heterogeneous
 (hit@R5 ranges from $0.06$ on Steinhart to $0.55$ on K562-Essential), so a bootstrap that treats the
 \emph{screen} as the resampling unit gives deliberately wide marginal intervals: C $0.256$
-$[0.151, 0.372]$ (this robustness analysis is on the legacy routed C; the final system's $0.255$ sits
+$[0.151, 0.372]$ (this robustness analysis is on the legacy routed C; the final system's $0.251$ sits
 inside the interval), the LOO prior $0.217$ $[0.120, 0.323]$, Online ML $0.224$ $[0.128, 0.324]$ --- all
 overlapping. On an unpaired basis, with nine screens, no method is separable from another, and we do not
 claim otherwise. The comparison that survives is the \emph{paired} one, where the between-screen variance
@@ -592,7 +606,7 @@ additionally denies the cross-experiment \emph{prior} its siblings.
 \centering
 \caption{\textbf{The final Waddington is the leakage-free, privilege-free configuration} (bold): its
 fusion weight and feature policy are fixed entirely from pre-experiment metadata, and it uses \emph{no}
-anchor-relative features. It reaches $0.255$ --- statistically identical to the legacy target-aware routed
+anchor-relative features. It reaches $0.251$ --- statistically identical to the legacy target-aware routed
 C-arm ($0.256$, which reads the realized hit rate) --- and beats the LOO prior on 8 of 9 screens. Deltas
 are paired per-screen with screen-clustered bootstrap 95\% CIs (nine screens). Rows below show what each
 relaxation is worth (anchor features $+0.009$; per-screen routing $0$); the last row is the strict test
@@ -608,33 +622,36 @@ Configuration & mean & \multicolumn{1}{c}{$\Delta$ vs.\ LOO (W/T/L)} & \multicol
 Static LOO-LightGBM (no LLM)                  & 0.217 & --- & \\
 Legacy routed C (\emph{uses realized $hr$})   & 0.256 & $+0.039$\,{\tiny$[.019,.062]$}\,9/0/0 & --- \\
 \midrule
-\textbf{Final Waddington} (metadata only, \textbf{no anchor feats}) & \textbf{0.255} & $+0.038$\,{\tiny$[.016,.062]$}\,8/1/0 & $-0.001$\,{\tiny$[\!-\!.022,.025]$}\,3/0/6 \\
-\quad\emph{with} anchor features (global-fixed) & 0.264 & $+0.047$\,{\tiny$[.025,.071]$}\,9/0/0 & $+0.008$\,{\tiny$[\!-\!.013,.031]$}\,6/0/3 \\
+\textbf{Final Waddington} (metadata only, \textbf{no anchor feats}) & \textbf{0.251} & $+0.034$\,{\tiny$[.016,.053]$}\,8/0/1 & $-0.005$\,{\tiny$[\!-\!.018,.007]$}\,3/0/6 \\
+\quad\emph{with} anchor features (global-fixed)$^{\S}$ & 0.264 & $+0.047$\,{\tiny$[.025,.071]$}\,9/0/0 & $+0.008$\,{\tiny$[\!-\!.013,.031]$}\,6/0/3 \\
 \quad nested router (with anchor)             & 0.260 & $+0.043$\,{\tiny$[.021,.069]$}\,9/0/0 & $+0.004$\,{\tiny$[\!-\!.017,.029]$}\,5/0/4 \\
 \quad study-excluded policy selection         & 0.262 & $+0.045$\,{\tiny$[.021,.070]$}\,8/0/1 & $+0.006$\,{\tiny$[\!-\!.015,.030]$}\,4/0/5 \\
 \midrule
 \textbf{Full leave-one-study-out} (policy \emph{and} prior) & 0.239 & $+0.041^{\dagger}$\,{\tiny$[.014,.078]$}\,7/0/2 & --- \\
 \bottomrule
 \end{tabular}\\[2pt]
-{\footnotesize $^{\dagger}$For this row the prior is also denied its siblings, so the matched reference is
-the \emph{sibling-excluded} LOO ($0.199$), not the standard LOO; against the standard LOO ($0.217$) it is
+{\footnotesize $^{\S}$Final Waddington is over 5 seeds (matching Table~\ref{tab:main}); the router-variant
+rows below it are 3 seeds, so the anchor / routing deltas are read at 3 seeds ($0.264$ vs.\ $0.255$).
+$^{\dagger}$For the last row the prior is also denied its siblings, so the matched reference is the
+\emph{sibling-excluded} LOO ($0.199$), not the standard LOO; against the standard LOO ($0.217$) it is
 $+0.022$ {\tiny$[\!-\!.004,.052]$}. ``$+$ anchor'' / ``nested'' / ``study-excluded'' rows keep siblings in
 the prior. Ablations, attribution, and SHAP elsewhere in the paper were computed on the legacy routed
-C-arm, which is statistically indistinguishable from the final system ($0.256$ vs.\ $0.255$).}
+C-arm, which is statistically indistinguishable from the final system ($0.256$ vs.\ $0.251$).}
 \end{table}
 
 \noindent
 \textbf{This is the configuration we report as Waddington.} It fixes $w_{\mathrm{LLM}}=0.2$ globally from
 metadata (chosen by leave-one-out over the other screens, unanimously in every fold), uses the metadata
-feature policy, and drops the anchor-relative features flagged as privileged. It reaches $0.255$ ---
-indistinguishable from the legacy target-aware routed C-arm ($0.256$; paired $-0.001$, CI
-$[\!-\!.022,.025]$) --- while using \emph{no} target statistic and \emph{no} privileged feature, and it
-beats the LOO prior by $+0.038$ ($95\%$ CI $[0.016,0.062]$, 8/1/0). The two relaxations the legacy system
-made buy almost nothing: restoring the anchor features adds $0.009$, and the hit-rate per-screen routing
-adds nothing at all --- it was in fact mildly \emph{suboptimal}, forcing $w_{\mathrm{LLM}}=0.4$ on the two
-small screens where a global $0.2$ scores higher (Scharenberg22 $0.55$ vs.\ $0.45$; K562-Essential $0.59$
-vs.\ $0.55$). We keep the legacy routed numbers for the detailed ablations, attribution, and SHAP that
-were computed on it (it is statistically identical), but the headline rests on the leakage-free system.
+feature policy, and drops the anchor-relative features flagged as privileged. Over 5 seeds it reaches
+$0.251$ --- indistinguishable from the legacy target-aware routed C-arm ($0.256$; paired $-0.005$, CI
+$[\!-\!.018,.007]$) --- while using \emph{no} target statistic and \emph{no} privileged feature, and it
+beats the LOO prior by $+0.034$ ($95\%$ CI $[0.016,0.053]$, 8/0/1). The two relaxations the legacy system
+made buy almost nothing: at 3 seeds restoring the anchor features adds only $\approx\!0.009$, and the
+hit-rate per-screen routing adds nothing at all --- it was in fact mildly \emph{suboptimal}, forcing
+$w_{\mathrm{LLM}}=0.4$ on the two small screens where a global $0.2$ scores higher (Scharenberg22 $0.55$
+vs.\ $0.45$; K562-Essential $0.59$ vs.\ $0.55$). We keep the legacy routed numbers for the detailed
+ablations, attribution, and SHAP that were computed on it (it is statistically identical), but the
+headline rests on the leakage-free system.
 
 \paragraph{The stricter test: deny the prior its siblings.} The variants above route honestly but still
 let the cross-experiment prior \emph{train on} same-study sibling screens. The strongest
@@ -655,7 +672,7 @@ adaptation and LLM verification, which no sibling supplies.
 \caption{Discovery curves: cumulative hit ratio per round, averaged over the nine screens.
 The hybrid C-arm separates from every baseline from round~2 onwards.
 (This and the next figure depict the legacy routed C-arm, avg $0.256$; the final leakage-free system is
-statistically identical at $0.255$, Table~\ref{tab:main}$^\ddagger$.)
+statistically identical at $0.251$, Table~\ref{tab:main}$^\ddagger$.)
 Per-screen values are given in Figure~\ref{fig:heatmap}; no error band is drawn because the spread
 across screens is dominated by how hard each screen is (K562-Essential 0.56 vs.\ Carnevale22 0.06),
 which would encode screen difficulty rather than uncertainty about a method.}
@@ -695,7 +712,7 @@ Right: paired ablation deltas (Table~\ref{tab:ablation}). Colour states a fact a
   Stepwise improvement in average hit ratio at round 5 (9 datasets, 5 seeds).
   Each row introduces one additional component over the previous configuration.
   The final row is the \emph{legacy} routed C-arm (0.256), used here for the component decomposition; the
-  final leakage-free system (0.255, Table~\ref{tab:main}$^\ddagger$) is statistically identical.
+  final leakage-free system (0.251, Table~\ref{tab:main}$^\ddagger$) is statistically identical.
 }
 \label{tab:progression}
 \begin{tabular}{llcc}
@@ -1258,11 +1275,11 @@ Read plainly, the evidence supports a deliberately scoped set of claims:
   plain hit-frequency ranking over the other screens reaches $0.243$, matching the learned LOO-LightGBM;
   most of the transferable signal is genes that \emph{recur} as hits, not novel phenotype-specific biology.
   \item \textbf{Waddington reliably improves the feature-based prior it actually deploys.} From the
-  routing-free LOO prior ($0.217$) to the final leakage-free system ($0.255$) is $+0.038$ (screen-clustered
-  $95\%$ CI $[0.016,0.062]$, 8 of 9 screens; Table~\ref{tab:honest_router}).
+  routing-free LOO prior ($0.217$) to the final leakage-free system ($0.251$) is $+0.034$ (screen-clustered
+  $95\%$ CI $[0.016,0.053]$, 8 of 9 screens; Table~\ref{tab:honest_router}).
   \item \textbf{We do \emph{not} establish an advantage over a pure recurrence ranking.} Starting both from
   the same hit-frequency prior, adding online adaptation and LLM verification moves the mean only
-  $0.243\!\rightarrow\!0.245$ (paired $+0.002$, CI including zero). On this nine-screen benchmark the
+  $0.243\!\rightarrow\!0.239$ (paired $-0.004$, CI including zero). On this nine-screen benchmark the
   within-screen components are not shown to beat recurrence.
   \item \textbf{The LLM's supported role is conditional verification, not discovery.} Endorsement predicts
   hits after adjusting for the ML score (adjusted OR $1.68$), but only among high-confidence ML candidates;
