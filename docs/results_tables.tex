@@ -37,9 +37,11 @@ is that this constraint is what makes it work.}\\
 \noindent
 Designing a genome-scale CRISPR screen means choosing, over a few rounds of $\sim$128 perturbations,
 which genes to test --- a batch active-learning problem. We present Waddington, a hybrid that fuses an
-online-retrained gradient-boosted ranker with a tool-less LLM, reaching $\mathrm{hit@R5}=0.256$ across
-nine public screens, above online ML alone (0.224), an LLM-only baseline (0.225), and a diversity
-baseline (0.134). To place this against prior work we ran both relevant lineages on our own benchmark
+online-retrained gradient-boosted ranker with a tool-less LLM, reaching $\mathrm{hit@R5}=0.255$ across
+nine public screens under a configuration fixed entirely from pre-experiment metadata --- no target
+statistic and no privileged features --- above online ML alone (0.224), an LLM-only baseline (0.225), and
+a diversity baseline (0.134). (An earlier target-aware routed variant scores an indistinguishable 0.256;
+we report the leakage-free system.) To place this against prior work we ran both relevant lineages on our own benchmark
 under identical evaluation: BioDiscoveryAgent's LLM agent scores 0.105 and GeneDisco's active-learning
 acquisition functions 0.113 on the six shared screens --- yet our leave-one-out prior, a static model
 with \emph{no} LLM, reaches 0.187, beating both. The differentiator is therefore a cross-experiment
@@ -201,11 +203,14 @@ per-screen feature set. Routing and fusion affect only the \emph{smaller} increm
 over that prior ($0.187\!\rightarrow\!0.217$ on the shared six). Third, the feature rule has a
 pre-registrable form independent of the target labels --- ``drop knockout-derived essentiality on
 non-knockout (CRISPRa) and on curated-essentiality screens'' --- which is what SHAP shows the model
-already obeys. Finally, we do not merely argue this --- we \emph{measure} it: a leakage-free router that
-re-selects the fusion weight and feature policy using only the other screens and pre-experiment metadata
-reaches $0.264$, matching (slightly exceeding) the shipped, hit-rate-routed C-arm, and still beats the
-LOO prior by $+0.047$ winning all nine screens (\S\ref{sec:honest-router}). The realized-hit-rate
-routing is therefore not doing the work.
+already obeys. Finally, we do not merely argue this --- we \emph{measure} it, and in fact
+\textbf{the system we report is the leakage-free one}: fixing the fusion weight and feature policy from
+metadata alone, and dropping the privileged anchor features entirely, reaches $0.255$ ---
+indistinguishable from the target-aware routed variant ($0.256$) it replaces --- and still beats the LOO
+prior by $+0.038$ on 8 of 9 screens (\S\ref{sec:honest-router}). The realized-hit-rate routing and the
+anchor features are therefore not doing the work; the description above of per-screen routing and anchor
+features documents the \emph{legacy} variant, retained only because the detailed ablations and SHAP were
+computed on it.
 
 \paragraph{Design principle.} Throughout, the LLM \emph{re-weights a calibrated model's candidates}
 rather than choosing genes freely. This is deliberate: the attribution analysis
@@ -513,6 +518,9 @@ K562-GWPS      & 0.065 & 0.247 & \second{0.273} & 0.156 & 0.225 & \best{0.347} \
 
 Waddington (C) achieves the best average hit ratio (0.256), outperforming the LLM baseline B
 by 13.7\% relative (+0.031) and the algorithmic baseline A by 91.6\% (+0.122).
+(This table and the ablations that follow use the \emph{legacy} target-aware routed C-arm; the final
+leakage-free system we report scores an indistinguishable $0.255$, Table~\ref{tab:honest_router}, so the
+per-screen contrasts here transfer unchanged.)
 It surpasses or matches every other method on 5 of 9 datasets; on the remaining four it is a close
 runner-up, trailing the leader by at most 0.013.
 Notably, Waddington strongly exceeds OnlineAdaptive (the PerTurboAgent-style ML-only method)
@@ -566,46 +574,51 @@ additionally denies the cross-experiment \emph{prior} its siblings.
 
 \begin{table}[H]
 \centering
-\caption{The C-arm's advantage survives an honest router. Every configuration below the first two rows
-chooses its weight and feature policy \emph{without} the target's realized hit rate; deltas are paired
-per-screen with screen-clustered bootstrap 95\% CIs (nine screens). The leakage-free variants match or
-slightly exceed the shipped hit-rate-routed C-arm and beat the LOO prior on 8--9 of 9 screens --- so the
-routing's use of a test-set statistic is not what produces the result. The last row is the strict test
-that also denies the prior its siblings (\S below). Reproduce with
+\caption{\textbf{The final Waddington is the leakage-free, privilege-free configuration} (bold): its
+fusion weight and feature policy are fixed entirely from pre-experiment metadata, and it uses \emph{no}
+anchor-relative features. It reaches $0.255$ --- statistically identical to the legacy target-aware routed
+C-arm ($0.256$, which reads the realized hit rate) --- and beats the LOO prior on 8 of 9 screens. Deltas
+are paired per-screen with screen-clustered bootstrap 95\% CIs (nine screens). Rows below show what each
+relaxation is worth (anchor features $+0.009$; per-screen routing $0$); the last row is the strict test
+that also denies the prior its siblings. Reproduce with
 \texttt{python -m waddington\_select.analysis.router\_analysis}.}
 \label{tab:honest_router}
 \small
 \setlength{\tabcolsep}{5pt}
-\begin{tabular}{lcccc}
+\begin{tabular}{lccc}
 \toprule
-Configuration & mean & \multicolumn{1}{c}{$\Delta$ vs.\ LOO (W/T/L)} & \multicolumn{1}{c}{$\Delta$ vs.\ routed C (W/T/L)} \\
+Configuration & mean & \multicolumn{1}{c}{$\Delta$ vs.\ LOO (W/T/L)} & \multicolumn{1}{c}{$\Delta$ vs.\ legacy C (W/T/L)} \\
 \midrule
-Static LOO-LightGBM (no LLM)                 & 0.217 & --- & \\
-Routed C (shipped; \emph{uses realized $hr$}) & 0.256 & $+0.039$\,{\tiny$[.019,.062]$}\,9/0/0 & --- \\
+Static LOO-LightGBM (no LLM)                  & 0.217 & --- & \\
+Legacy routed C (\emph{uses realized $hr$})   & 0.256 & $+0.039$\,{\tiny$[.019,.062]$}\,9/0/0 & --- \\
 \midrule
-\textbf{Global-fixed} (honest)               & \textbf{0.264} & $+0.047$\,{\tiny$[.025,.071]$}\,9/0/0 & $+0.008$\,{\tiny$[\!-\!.013,.031]$}\,6/0/3 \\
-\textbf{Nested router} (honest)              & 0.260 & $+0.043$\,{\tiny$[.021,.069]$}\,9/0/0 & $+0.004$\,{\tiny$[\!-\!.017,.029]$}\,5/0/4 \\
-Study-excluded \emph{policy selection}       & 0.262 & $+0.045$\,{\tiny$[.021,.070]$}\,8/0/1 & $+0.006$\,{\tiny$[\!-\!.015,.030]$}\,4/0/5 \\
-Study-excluded policy selection, nested      & 0.258 & $+0.041$\,{\tiny$[.017,.067]$}\,8/0/1 & $+0.002$\,{\tiny$[\!-\!.020,.026]$}\,3/0/6 \\
+\textbf{Final Waddington} (metadata only, \textbf{no anchor feats}) & \textbf{0.255} & $+0.038$\,{\tiny$[.016,.062]$}\,8/1/0 & $-0.001$\,{\tiny$[\!-\!.022,.025]$}\,3/0/6 \\
+\quad\emph{with} anchor features (global-fixed) & 0.264 & $+0.047$\,{\tiny$[.025,.071]$}\,9/0/0 & $+0.008$\,{\tiny$[\!-\!.013,.031]$}\,6/0/3 \\
+\quad nested router (with anchor)             & 0.260 & $+0.043$\,{\tiny$[.021,.069]$}\,9/0/0 & $+0.004$\,{\tiny$[\!-\!.017,.029]$}\,5/0/4 \\
+\quad study-excluded policy selection         & 0.262 & $+0.045$\,{\tiny$[.021,.070]$}\,8/0/1 & $+0.006$\,{\tiny$[\!-\!.015,.030]$}\,4/0/5 \\
 \midrule
 \textbf{Full leave-one-study-out} (policy \emph{and} prior) & 0.239 & $+0.041^{\dagger}$\,{\tiny$[.014,.078]$}\,7/0/2 & --- \\
 \bottomrule
 \end{tabular}\\[2pt]
 {\footnotesize $^{\dagger}$For this row the prior is also denied its siblings, so the matched reference is
 the \emph{sibling-excluded} LOO ($0.199$), not the standard LOO; against the standard LOO ($0.217$) it is
-$+0.022$ {\tiny$[\!-\!.004,.052]$}. The paired ``vs.\ routed C'' cell is omitted because routed C keeps
-its siblings (not a matched comparison).}
+$+0.022$ {\tiny$[\!-\!.004,.052]$}. ``$+$ anchor'' / ``nested'' / ``study-excluded'' rows keep siblings in
+the prior. Ablations, attribution, and SHAP elsewhere in the paper were computed on the legacy routed
+C-arm, which is statistically indistinguishable from the final system ($0.256$ vs.\ $0.255$).}
 \end{table}
 
 \noindent
-The honest global-fixed policy selects $w_{\mathrm{LLM}}=0.2$ in every outer fold and reaches
-$\mathbf{0.264}$ --- above the shipped $0.256$. The gain is concentrated exactly where the hit-rate
-router made its worst calls: on the two small screens it forced $w_{\mathrm{LLM}}=0.4$, but a global
-$0.2$ scores $0.55$ on Scharenberg22 (vs.\ $0.45$ routed) and $0.59$ on K562-Essential (vs.\ $0.55$).
-So the per-screen routing was not only leaky, it was mildly \emph{suboptimal}. The delta against the LOO
-prior --- the paper's actual claim --- is $+0.04$ to $+0.047$ with a CI excluding zero and 8--9 wins in
-every variant, including leave-one-study-out. We therefore keep $0.256$ as the shipped system's number
-but rest no claim on the router: the leakage-free configuration is at least as good.
+\textbf{This is the configuration we report as Waddington.} It fixes $w_{\mathrm{LLM}}=0.2$ globally from
+metadata (chosen by leave-one-out over the other screens, unanimously in every fold), uses the metadata
+feature policy, and drops the anchor-relative features flagged as privileged. It reaches $0.255$ ---
+indistinguishable from the legacy target-aware routed C-arm ($0.256$; paired $-0.001$, CI
+$[\!-\!.022,.025]$) --- while using \emph{no} target statistic and \emph{no} privileged feature, and it
+beats the LOO prior by $+0.038$ ($95\%$ CI $[0.016,0.062]$, 8/1/0). The two relaxations the legacy system
+made buy almost nothing: restoring the anchor features adds $0.009$, and the hit-rate per-screen routing
+adds nothing at all --- it was in fact mildly \emph{suboptimal}, forcing $w_{\mathrm{LLM}}=0.4$ on the two
+small screens where a global $0.2$ scores higher (Scharenberg22 $0.55$ vs.\ $0.45$; K562-Essential $0.59$
+vs.\ $0.55$). We keep the legacy routed numbers for the detailed ablations, attribution, and SHAP that
+were computed on it (it is statistically identical), but the headline rests on the leakage-free system.
 
 \paragraph{The stricter test: deny the prior its siblings.} The variants above route honestly but still
 let the cross-experiment prior \emph{train on} same-study sibling screens. The strongest
