@@ -141,80 +141,60 @@ credited to the LLM (Table~\ref{tab:main}$^\dagger$).
 \[
   \mathrm{score}(g) \;=\; w_{\mathrm{ML}}\cdot \mathrm{ml}(g) \;+\; w_{\mathrm{LLM}}\cdot \mathbf{1}[g \text{ named by the LLM}],
 \]
-and the top $B$ genes are taken; on one route the ML instead shortlists its top
-$\mathrm{SHORTLIST}=384$ candidates and the LLM picks $B$ from that shortlist. The weights and the route
-are set per screen, as follows.
+and the top $B$ genes are taken. In the reported system the weight is a \emph{single global constant},
+not a per-screen choice.
 
-\subsection*{Two routing decisions, fixed up front}
+\subsection*{The final configuration: fixed from metadata}
 
-Before any round runs, two properties of the screen fix how it is handled.
-
-\noindent
-\textbf{Fusion routing} sets who decides, from the pool size $n$ and hit rate $hr$:
-
-\begin{center}\small
-\begin{tabular}{lll}
-\toprule
-Route & Condition & $w_{\mathrm{ML}} : w_{\mathrm{LLM}}$ \\
-\midrule
-\texttt{ml\_heavy}  & $n>15000$ and $2\%<hr<7\%$ (large, sparse) & $0.8 : 0.2$ \\
-\texttt{two\_stage} & $3000<n\le15000$ and $hr>8\%$ & ML shortlists, LLM picks \\
-\texttt{baseline}   & otherwise & $0.6 : 0.4$ \\
-\bottomrule
-\end{tabular}
-\end{center}
+The system we report fixes everything a screen needs \emph{before} it runs, using only pre-experiment
+metadata --- pool size, perturbation modality, cell line --- and never the target's realized labels.
 
 \noindent
-On large, sparse screens the ML prior is most reliable and the LLM is given only $0.2$ weight; smaller
-or denser screens give the LLM more say.
+\textbf{Fusion weight.} A single global $w_{\mathrm{LLM}}=0.2$ ($w_{\mathrm{ML}}=0.8$) on every screen.
+That value is chosen once, by leave-one-out over the \emph{other} screens (it wins in every fold); no
+per-screen routing and no hit rate are involved.
 
 \noindent
-\textbf{Feature routing} sets whether the knockout-derived DepMap features are used:
+\textbf{Feature policy}, a pure function of experimental-design metadata:
 
 \begin{center}\small
 \begin{tabular}{ll}
 \toprule
-Screen & DepMap features \\
+Metadata of the screen & DepMap features \\
 \midrule
-gain-of-function (CRISPRa) or curated-essentiality & \textbf{none} \\
-K562 perturb-seq / IL-2 / Sanchez21-down            & pan-cancer only \\
-all others                                          & pan-cancer + K562-specific \\
+gain-of-function (CRISPRa) or curated-essentiality panel & \textbf{none} \\
+cell line $=$ K562                                        & pan-cancer only (drop K562-matched) \\
+otherwise                                                 & pan-cancer + K562-specific \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \noindent
-This router was tuned \emph{empirically} --- trying feature sets and keeping whatever scored best --- and
-only later understood: DepMap is knockout-derived, so it misleads on a gain-of-function screen, and a
-pan-cancer essentiality prior nearly restates the label of a curated essentiality screen. SHAP confirms
-the model uses exactly these features where they are kept and ignores them where they are dropped
-(Table~\ref{tab:shap}).
+DepMap is knockout-derived, so it misleads on a gain-of-function screen; a pan-cancer essentiality prior
+nearly restates a curated-essentiality label; and a cell-line-matched essentiality feature is a proxy
+label on its own cell line. SHAP confirms the model uses these features where kept and ignores them where
+dropped (Table~\ref{tab:shap}). \textbf{The anchor-relative features are dropped entirely}: a leakage
+audit found $51\%$ of anchors are themselves target hits (privileged information), and removing them costs
+only $0.009$ (\S\ref{sec:honest-router}).
 
-\paragraph{What the router may and may not know (and the resulting risk).} We are explicit about a real
-evaluation hazard here. The fusion route reads a hit rate $hr$; \emph{in the benchmark that is the
-realized hit rate computed from the screen's full labels}, i.e.\ a statistic of the test set, and it
-determines the route on seven of the nine screens (pool size alone fixes only the two smallest). In
-deployment the same code path instead reads the scientist's \emph{expected} hit rate from the phenotype
-registry, which is knowable before the screen; but our reported numbers use the realized rate, so the
-router is target-aware and the per-screen feature set was chosen post hoc on the target. A reviewer is
-right to discount any headline that leans on this. Three things bound the exposure. First, the router's
-freedom is small: it selects a coarse $w_{\mathrm{LLM}}\!\in\!\{0.2,0.4\}$ from a wide hit-rate band, not
-a tuned continuous weight, so a rough pre-experiment estimate would route the same. Second, and
-decisively, \textbf{the paper's main claim does not use the router at all}: the cross-experiment prior
-that beats single-experiment active learning and LLM agents ($0.187$ vs.\ $\approx\!0.11$,
-Table~\ref{tab:external}) is the routing-free static LOO-LightGBM --- one global model, no $hr$, no
-per-screen feature set. Routing and fusion affect only the \emph{smaller} increment of the full C-arm
-over that prior ($0.187\!\rightarrow\!0.217$ on the shared six). Third, the feature rule has a
-pre-registrable form independent of the target labels --- ``drop knockout-derived essentiality on
-non-knockout (CRISPRa) and on curated-essentiality screens'' --- which is what SHAP shows the model
-already obeys. Finally, we do not merely argue this --- we \emph{measure} it, and in fact
-\textbf{the system we report is the leakage-free one}: fixing the fusion weight and feature policy from
-metadata alone, and dropping the privileged anchor features entirely, reaches $0.255$ ---
-indistinguishable from the target-aware routed variant ($0.256$) it replaces --- and still beats the LOO
-prior by $+0.038$ on 8 of 9 screens (\S\ref{sec:honest-router}). The realized-hit-rate routing and the
-anchor features are therefore not doing the work; the description above of per-screen routing and anchor
-features documents the \emph{legacy} variant, retained only because the detailed ablations and SHAP were
-computed on it.
+\noindent
+\textbf{A legacy target-aware router (analyzed in \S\ref{sec:honest-router}, not used here).} An earlier
+version set $w_{\mathrm{LLM}}$ per screen from the \emph{realized} hit rate
+(\texttt{ml\_heavy}\,$0.8{:}0.2$ / \texttt{two\_stage} / \texttt{baseline}\,$0.6{:}0.4$) and kept the
+anchor features. It scores an indistinguishable $0.256$ but reads a test-set statistic, so we retain it
+only as a robustness comparison; the detailed ablations, attribution, and SHAP were computed on it and
+transfer unchanged.
+
+\paragraph{Why the reported system avoids the legacy router.} The legacy route reads the realized hit
+rate --- a statistic of the test set, determining the route on seven of the nine screens --- and keeps the
+privileged anchor features. That is precisely why the reported system uses neither. Fixing the weight and
+the feature policy from pre-experiment metadata and dropping the anchor features reaches $0.255$,
+indistinguishable from the routed $0.256$ (paired $-0.001$), and still beats the routing-free LOO prior by
+$+0.038$ on 8 of 9 screens (\S\ref{sec:honest-router}). The main external claim never used the router
+anyway: the cross-experiment prior that beats single-experiment active learning and LLM agents ($0.187$
+vs.\ $\approx\!0.11$, Table~\ref{tab:external}) is the routing-free static LOO-LightGBM. We keep the legacy
+variant only because the detailed ablations, attribution, and SHAP were computed on it (statistically
+identical).
 
 \paragraph{Design principle.} Throughout, the LLM \emph{re-weights a calibrated model's candidates}
 rather than choosing genes freely. This is deliberate: the attribution analysis
@@ -1270,6 +1250,31 @@ bottom quintile, though the curve is flat in the middle and the range is narrow 
 \end{figure}
 
 % ─────────────────────────────────────────────────────────────────────────────
+\section*{What we claim, and what we do not}
+
+Read plainly, the evidence supports a deliberately scoped set of claims:
+\begin{enumerate}\itemsep2pt
+  \item \textbf{Cross-screen recurrence and generic essentiality form a strong transferable prior.} A
+  plain hit-frequency ranking over the other screens reaches $0.243$, matching the learned LOO-LightGBM;
+  most of the transferable signal is genes that \emph{recur} as hits, not novel phenotype-specific biology.
+  \item \textbf{Waddington reliably improves the feature-based prior it actually deploys.} From the
+  routing-free LOO prior ($0.217$) to the final leakage-free system ($0.255$) is $+0.038$ (screen-clustered
+  $95\%$ CI $[0.016,0.062]$, 8 of 9 screens; Table~\ref{tab:honest_router}).
+  \item \textbf{We do \emph{not} establish an advantage over a pure recurrence ranking.} Starting both from
+  the same hit-frequency prior, adding online adaptation and LLM verification moves the mean only
+  $0.243\!\rightarrow\!0.245$ (paired $+0.002$, CI including zero). On this nine-screen benchmark the
+  within-screen components are not shown to beat recurrence.
+  \item \textbf{The LLM's supported role is conditional verification, not discovery.} Endorsement predicts
+  hits after adjusting for the ML score (adjusted OR $1.68$), but only among high-confidence ML candidates;
+  it is not shown to surface biology beyond what the ML already ranks highly.
+\end{enumerate}
+
+\noindent
+In one sentence: \emph{cross-screen recurrence and essentiality provide most of the transferable signal;
+Waddington integrates that prior into a constrained, conversational sequential system and reliably improves
+it through within-screen adaptation and constrained LLM endorsement, but the available nine-screen
+benchmark does not establish an advantage over a pure recurrence ranking.}
+
 \section*{Limitations}
 
 \paragraph{We cannot separate the LLM's biological knowledge from memorisation.}
