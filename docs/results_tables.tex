@@ -351,6 +351,46 @@ Sanchez21      & 0.037 & 0.027 & 0.063 & 0.077 & \textbf{0.087} \\
 \end{tabular}
 \end{table}
 
+\subsection*{What the cross-experiment prior actually learns (and what it does not)}
+
+The prior is the largest single source of our advantage, so it deserves scrutiny: is its gain genuine
+phenotype-specific transfer, or something more trivial --- sibling-screen leakage, generic essentiality,
+plain hit recurrence? We probe this with the LOO LightGBM alone (no LLM), on a uniform all-feature
+baseline so the feature-family ablation is clean; this scores 0.243 averaged over the nine screens
+(slightly above the routed 0.187/0.217 used elsewhere, as it keeps DepMap on every screen). Three probes,
+and the picture is sobering.
+
+\begin{itemize}\itemsep3pt
+  \item \textbf{Sibling leakage is real.} Our nine screens contain three same-study pairs
+  (IFN-$\gamma$/IL-2, Sanchez21/-down, K562-Essential/-GWPS). Re-training with the target's sibling
+  \emph{also} removed drops the prior from 0.243 to 0.199 on average, and from 0.248 to \textbf{0.182}
+  on the six paired screens --- concentrated on IL-2 ($-0.098$) and K562-Essential ($-0.222$), whose
+  Perturb-seq sibling shares much of its hit structure. So ``generalises to a new screen'' partly means
+  ``transfers from a sister screen in the same study''.
+  \item \textbf{Most of the signal is generic essentiality.} Restricted to the DepMap features alone the
+  prior scores 0.230 --- nearly the full 0.243 --- while the phenotype-specific features
+  (intrinsic $+$ anchor, \emph{no} DepMap) give 0.219. The prior leans heavily on knockout essentiality,
+  which is not screen-specific.
+  \item \textbf{A trivial baseline matches it.} Ranking a gene simply by \emph{how often it is a hit in
+  the other screens} --- no model, no features --- also averages \textbf{0.243}. The LightGBM adds
+  nothing over counting cross-screen hit recurrence.
+\end{itemize}
+
+\noindent
+A novel-hit analysis explains the mechanism: the prior's gains sit on screens whose hits recur
+(K562-Essential has only 6\% novel hits, IL-2 41\%), and it is near random on screens dominated by novel,
+phenotype-specific hits (Carnevale22 80\% novel, Sanchez21 72\%). \textbf{The cross-experiment prior
+succeeds by exploiting recurrence and essentiality, not by discovering new phenotype-specific biology.}
+
+This qualifies but does not overturn the headline. Even after both corrections --- siblings excluded
+(0.182) and DepMap removed (0.219) --- the prior stays well above the single-experiment methods
+($\sim$0.11, Table~\ref{tab:external}). The honest claim is therefore narrower and, we think, more
+useful: \emph{a screen's hits are substantially predictable from other screens' labels, largely through
+recurrence and essentiality} --- which no within-experiment active learner or LLM agent can see --- but
+this prior is not a discovery engine for genuinely new biology, and the online-ML and LLM-verification
+components (which do adapt within the screen) are what carry it beyond a recurrence baseline. All numbers
+here are produced by \texttt{python -m waddington\_select.analysis.prior\_probes}.
+
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 2  Comprehensive method comparison
 % ─────────────────────────────────────────────────────────────────────────────
@@ -963,6 +1003,11 @@ nine qualifies.
 
 \paragraph{Other limitations.}
 \begin{itemize}\itemsep2pt
+  \item \textbf{The cross-experiment prior is largely recurrence, not discovery.} As the prior-probe
+  analysis shows, its gain comes substantially from same-study sibling screens ($-0.066$ on paired
+  screens when excluded) and from generic knockout essentiality (DepMap-only $\approx$ the full model,
+  and a trivial cross-screen hit-frequency count matches it). It is near-random on screens whose hits
+  are mostly novel. It predicts what recurs; it does not find new phenotype-specific biology.
   \item \textbf{Not a verbatim reproduction of BioDiscoveryAgent.} We use their data and non-essential
   convention. We \emph{did} run their agent as a controlled comparison (Table~\ref{tab:external}), but
   with our backend and model (Haiku 4.5) and small harness adaptations, not their exact published
