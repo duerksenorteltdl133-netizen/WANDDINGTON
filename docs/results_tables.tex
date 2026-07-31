@@ -198,9 +198,11 @@ per-screen feature set. Routing and fusion affect only the \emph{smaller} increm
 over that prior ($0.187\!\rightarrow\!0.217$ on the shared six). Third, the feature rule has a
 pre-registrable form independent of the target labels --- ``drop knockout-derived essentiality on
 non-knockout (CRISPRa) and on curated-essentiality screens'' --- which is what SHAP shows the model
-already obeys. The clean confirmation, still outstanding, is a nested leave-one-screen-out that re-selects
-route, weights, and feature set on the training screens only; we flag it as future work and do not rest
-the contribution on the routed increment.
+already obeys. Finally, we do not merely argue this --- we \emph{measure} it: a leakage-free router that
+re-selects the fusion weight and feature policy using only the other screens and pre-experiment metadata
+reaches $0.264$, matching (slightly exceeding) the shipped, hit-rate-routed C-arm, and still beats the
+LOO prior by $+0.047$ winning all nine screens (\S\ref{sec:honest-router}). The realized-hit-rate
+routing is therefore not doing the work.
 
 \paragraph{Design principle.} Throughout, the LLM \emph{re-weights a calibrated model's candidates}
 rather than choosing genes freely. This is deliberate: the attribution analysis
@@ -509,6 +511,57 @@ Every paired interval excludes zero, and C beats the LOO prior on all nine scree
 statement is not ``C's mean is significantly higher'' --- with nine heterogeneous screens it is not ---
 but ``C improves on each baseline consistently, screen by screen.'' Reproduce with
 \texttt{python -m waddington\_select.\allowbreak analysis.\allowbreak clustered\_ci}.
+
+\subsection*{Robustness to a leakage-free router}
+\label{sec:honest-router}
+
+The Method disclosed a real hazard: the shipped router reads the target's \emph{realized} hit rate to
+pick the fusion weight (Method, ``What the router may and may not know''). We now test directly whether
+that leakage carries the result. Under a protocol \textbf{frozen and committed before these numbers were
+inspected} (\texttt{waddington\_select.router\_protocol}), we re-derive the fusion policy using only the
+\emph{other} screens and metadata knowable \emph{before} the target screen runs (pool size, perturbation
+modality, cell line) --- never the target hit rate. Two variants: \textbf{global-fixed}, one fusion
+weight $w_{\mathrm{LLM}}$ chosen by leave-one-out over the other screens; and a \textbf{nested router},
+$w_{\mathrm{LLM}}=f(n_{\mathrm{pool}})$ with thresholds tuned only on the other screens. Both use a
+label-free metadata feature policy (DepMap dropped iff CRISPRa or curated-essentiality; cell-line-matched
+DepMap dropped on its own cell line). We also report a \textbf{leave-one-study-out} version that removes
+the target's whole same-study group from the selection set.
+
+\begin{table}[H]
+\centering
+\caption{The C-arm's advantage survives an honest router. Every configuration below the first two rows
+chooses its weight and feature policy \emph{without} the target's realized hit rate; deltas are paired
+per-screen with screen-clustered bootstrap 95\% CIs (nine screens). The leakage-free variants match or
+slightly exceed the shipped hit-rate-routed C-arm and beat the LOO prior on 8--9 of 9 screens --- so the
+routing's use of a test-set statistic is not what produces the result. Reproduce with
+\texttt{python -m waddington\_select.analysis.router\_analysis}.}
+\label{tab:honest_router}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lcccc}
+\toprule
+Configuration & mean & \multicolumn{1}{c}{$\Delta$ vs.\ LOO (W/T/L)} & \multicolumn{1}{c}{$\Delta$ vs.\ routed C (W/T/L)} \\
+\midrule
+Static LOO-LightGBM (no LLM)                 & 0.217 & --- & \\
+Routed C (shipped; \emph{uses realized $hr$}) & 0.256 & $+0.039$\,{\tiny$[.019,.062]$}\,9/0/0 & --- \\
+\midrule
+\textbf{Global-fixed} (honest)               & \textbf{0.264} & $+0.047$\,{\tiny$[.025,.071]$}\,9/0/0 & $+0.008$\,{\tiny$[\!-\!.013,.031]$}\,6/0/3 \\
+\textbf{Nested router} (honest)              & 0.260 & $+0.043$\,{\tiny$[.021,.069]$}\,9/0/0 & $+0.004$\,{\tiny$[\!-\!.017,.029]$}\,5/0/4 \\
+Global-fixed, leave-one-study-out            & 0.262 & $+0.045$\,{\tiny$[.021,.070]$}\,8/0/1 & $+0.006$\,{\tiny$[\!-\!.015,.030]$}\,4/0/5 \\
+Nested router, leave-one-study-out           & 0.258 & $+0.041$\,{\tiny$[.017,.067]$}\,8/0/1 & $+0.002$\,{\tiny$[\!-\!.020,.026]$}\,3/0/6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+The honest global-fixed policy selects $w_{\mathrm{LLM}}=0.2$ in every outer fold and reaches
+$\mathbf{0.264}$ --- above the shipped $0.256$. The gain is concentrated exactly where the hit-rate
+router made its worst calls: on the two small screens it forced $w_{\mathrm{LLM}}=0.4$, but a global
+$0.2$ scores $0.55$ on Scharenberg22 (vs.\ $0.45$ routed) and $0.59$ on K562-Essential (vs.\ $0.55$).
+So the per-screen routing was not only leaky, it was mildly \emph{suboptimal}. The delta against the LOO
+prior --- the paper's actual claim --- is $+0.04$ to $+0.047$ with a CI excluding zero and 8--9 wins in
+every variant, including leave-one-study-out. We therefore keep $0.256$ as the shipped system's number
+but rest no claim on the router: the leakage-free configuration is at least as good.
 
 \begin{figure}[H]
 \centering
