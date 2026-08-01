@@ -36,8 +36,15 @@
   anchor 仅保留在 legacy 前身与 reason-vs-recall 探针中——"读下文的 anchor 特征时，请视为历史候选，而非最终
   先验的一部分"。避免读者先学一个稍后被撤回的版本。
 
-## 两条战略性建议（可选，未自动执行，见对话）
-- **§七 标题**：审稿人建议把 "Cross-Experiment Priors" 放进标题（保留 "agent" 的折中版）。这与作者一贯保留
-  "agent" 框架的偏好相关，属主观定位选择，交由作者决定。
-- **§八 正文精简入附录**：把 legacy router 细节、完整 SHAP、memory/skill 消融、tool-agent 逐屏表、
-  A0/A0.5/A1/A2 九屏全表、legacy 组件分解移入附录。这是较大的结构重排，非"必修"，建议单独确认后再做。
+## 两条战略性建议（作者确认后已执行）
+- **§七 标题**（作者选折中版）：改为 **"Waddington: A Constrained Conversational Agent with
+  Cross-Experiment Priors for Sequential CRISPR Gene Selection"**——保留 "agent"，同时把真正的性能来源
+  （cross-experiment priors）放进标题。
+- **§八 附录重排**（作者选执行）：新增 "Appendix: supporting and legacy analyses"（置于 Limitations 之后），
+  把三块**自足的次要/legacy 分析**移入：gain-of-function modality 探针、SHAP 特征归因、freely-planning
+  tool-using agent（含 transplant）；tool-agent 由 `\section*` 降为 `\subsection*`；主文留一句指引。主线现在是
+  problem → final system → 结果(0.231→0.251) → prior audit → reason-vs-recall → LLM role(条件化 OR) →
+  what we claim → limitations。编译干净、无 undefined refs。
+  - 说明：legacy 组件分解表(tab:progression)与逐组件 ablation 表**保留在正文**（已标注 legacy），因为
+    gene-name-shuffle 段直接承接 reason-vs-recall，强行拆分会破坏叙事桥接。若需进一步把这两张表也移入附录，
+    可再迭代。
