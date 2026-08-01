@@ -19,7 +19,7 @@
 \newcommand{\drop}[1]{\textcolor{red}{#1}}
 \newcommand{\gain}[1]{\textcolor{blue}{#1}}
 
-\title{Waddington: A Constrained Conversational ML\,--\,LLM Agent for Sequential CRISPR Gene Selection%
+\title{Waddington: A Constrained Conversational Agent with Cross-Experiment Priors for Sequential CRISPR Gene Selection%
 \thanks{We keep the term \emph{agent} deliberately: Waddington runs a stateful sequential loop, observes
 experimental feedback each round, updates its actions across rounds, and is driven through a
 natural-language conversational interface with the researcher. \emph{Constrained conversational}
@@ -992,184 +992,8 @@ One further calibration: \textbf{A0 (0.216) scores below the plain GBM (0.224)}.
 nothing to say does not merely fail to help --- at a 0.4 fusion weight it drags the hybrid below the
 ML model it was meant to improve.
 
-\subsection*{Testing the explanation: is it the gain-of-function modality? (No.)}
 
-The story above rests on a sample of one: Steinhart is the only gain-of-function (CRISPRa) screen in
-the benchmark, so ``gain-of-function makes the gene name matter'' is a hypothesis fitted to a single
-point. We tested it. The same study that supplied our IL-2 and IFN-$\gamma$ screens (Schmidt et al.,
-2022) ran \emph{both} a CRISPRi and a CRISPRa genome-wide screen for each cytokine, so the CRISPRa arm
-is the matched gain-of-function counterpart of two screens we already have. We onboarded
-\texttt{IL2\_crispra} and \texttt{IFNG\_crispra} from that arm, keeping everything fixed except the
-modality: the same anchor-relative features (they are modality-agnostic --- activating vs.\ silencing
-IL-2 biology shares the same anchors), the same hit convention, an activation-framed task prompt
-(``genes that, when \emph{over-expressed via CRISPRa}, regulate IL-2 production''), and --- because
-these large screens would otherwise route to the LLM-suppressed \texttt{ml\_heavy} regime --- the same
-fusion weight as Steinhart ($w_{\mathrm{LLM}}=0.4$).
-
-If gain-of-function were the cause, the gene name should be worth $\approx\!+0.08$ here too. It is not:
-
-\begin{center}\small
-\begin{tabular}{lcc}
-\toprule
-Screen (gain-of-function, CRISPRa) & name value (A2$-$A1) & cf.\ its CRISPRi twin \\
-\midrule
-\texttt{IL2\_crispra}  & $+0.002 \pm 0.003$ & $-0.050$ \\
-\texttt{IFNG\_crispra} & $-0.004 \pm 0.001$ & $+0.013$ \\
-\midrule
-\emph{Steinhart} (reference) & \emph{$+0.080 \pm 0.013$} & --- \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent
-On both new gain-of-function screens the gene name is worth nothing, an order of magnitude below
-Steinhart. \textbf{Perturbation modality does not explain Steinhart's name-dependence.} The
-corrected-prompt run barely moved these numbers from a first run with a placeholder prompt, so this is
-not an artefact of under-specifying the task; the name simply does not help here.
-
-What \emph{does} distinguish Steinhart is the shape of its hit set: 145 concentrated hits (0.8\%)
-dominated by textbook exhaustion regulators (IRF4, TOX, \ldots) that a language model knows cold,
-against $\sim$900 diffuse top-movers ($\sim$5\%) on each CRISPRa cytokine screen, where recognizable
-names are a small minority. Our loss-of-function-trained prior also transfers poorly to CRISPRa hits
-(hit@R5 $\approx 0.12$ vs.\ $0.35$ on the CRISPRi twin), so the whole system is weak there. We leave the
-hit-set-concentration hypothesis untested. The operational consequence is clear enough, though:
-\textbf{we do not route by modality} --- the structure-only reasoning mode stays an opt-in choice, not
-a default triggered by whether a screen is CRISPRa.
-
-\subsection*{An accidental confirmation: the feature router already knew}
-
-The C-arm selects its feature set per screen. That router was tuned \emph{empirically}, by trying
-feature sets and keeping whatever scored best, long before we understood why. It converged on
-excluding \textbf{all four DepMap features} for exactly two screens --- Steinhart and K562-Essential
---- because including them \emph{hurt}. The code comment recording this guessed at the reason
-(``DepMap disrupts online learning for GD2 biology''), and that guess was wrong: Steinhart does not
-measure GD2 biology at all (Table~\ref{tab:datasets}).
-
-The real reason is the one above. \textbf{Every DepMap feature is derived from knockout screens},
-and Steinhart is the one \emph{gain-of-function} (CRISPRa) screen: it asks which genes make CAR-T
-cells resist exhaustion \emph{when over-expressed}. A gene that is dispensable when deleted can be
-potent when over-expressed --- IRF4, among Steinhart's strongest hits, is essential in only 6\% of
-DepMap cell lines --- so a knockout-derived prior is not merely uninformative there, it is actively
-misleading, and the router learned to discard it.
-
-Reading the SHAP attributions back out confirms that this is what the model actually does:
-
-\begin{table}[H]
-\centering
-\caption{The ML model's most-used features, per screen (mean $|$SHAP$|$ over the genes it selected).
-DepMap essentiality dominates wherever it is available --- and is absent exactly where a
-knockout-derived prior does not transfer.}
-\label{tab:shap}
-\small
-\setlength{\tabcolsep}{6pt}
-\begin{tabular}{lll}
-\toprule
-Screen & Perturbation & Top features used by the ML model \\
-\midrule
-IFN-$\gamma$, IL-2, Carnevale22, & loss-of-function & \textbf{depmap\_frac\_ess} (rank 1), then PPI / pLI \\
-Scharenberg22, K562-GWPS & & \\
-\midrule
-\textbf{Steinhart} & \textbf{gain-of-function} & PPI, STRING degree, pathway counts --- \\
- & (CRISPRa) & \textbf{no DepMap feature at all} \\
-\textbf{K562-Essential} & loss-of-function & PPI, STRING degree --- \textbf{no DepMap feature} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\noindent
-This closes the loop on why Steinhart is the screen where the LLM matters most: it is precisely the
-screen where the ML model's single strongest feature family has been removed, leaving it with weak
-topological signal --- and the LLM's T-cell biology is what fills the gap.
-(K562-Essential drops DepMap for a different reason: it \emph{is} a curated essentiality screen, so a
-pan-cancer essentiality prior is close to a restatement of the label and adds nothing.)
-
-% ─────────────────────────────────────────────────────────────────────────────
-\section*{A freely planning tool-using agent underperforms the constrained pipeline}
-
-The natural next step from a pipeline is a \emph{tool-using agent} in the BioDiscoveryAgent /
-PerTurboAgent mould: let the LLM plan, call an ML-ranking tool and a pathway-enrichment tool, and
-commit a batch itself. We implemented exactly that (a task-specialised harness with a JSON action
-protocol; \texttt{ml\_rank} / \texttt{enrich} / \texttt{finish}; no agent framework) and benchmarked
-it against the pipeline on identical screens and budgets. We state the scope up front: this is one
-action set, one prompt, one stopping rule and one budget, so the result below is evidence that \emph{a
-freely planning agent does not beat the constrained fusion policy here}, not that tools are useless in
-general --- a different action schema or a policy that cannot override a confident ML score could
-close the gap.
-
-\begin{table}[H]
-\centering
-\caption{%
-  Tool-using agent vs.\ the deterministic pipeline (hit ratio @ R5).
-  The agent plans its own rounds and calls tools; the pipeline fuses online ML with LLM reasoning
-  under a fixed policy. The agent is \emph{worse on 8 of 9 screens}.
-}
-\label{tab:agent}
-\setlength{\tabcolsep}{8pt}
-\begin{tabular}{lccc}
-\toprule
-Dataset & Tool-using agent & Pipeline (C) & $\Delta$ \\
-\midrule
-Scharenberg22  & \best{0.582} & 0.465 & \gain{$+0.116$} \\
-Carnevale22    & 0.044 & \best{0.056} & $-0.012$ \\
-IFN-$\gamma$   & 0.163 & \best{0.190} & $-0.027$ \\
-Sanchez21       & 0.059 & \best{0.087} & $-0.029$ \\
-Sanchez21 (dn) & 0.049 & \best{0.099} & $-0.050$ \\
-Steinhart      & 0.100 & \best{0.159} & $-0.059$ \\
-IL-2           & 0.264 & \best{0.347} & $-0.083$ \\
-K562-GWPS      & 0.209 & \best{0.347} & \drop{$-0.138$} \\
-K562-Essential & 0.413 & \best{0.556} & \drop{$-0.143$} \\
-\midrule
-\textbf{Average} & 0.209 & \best{0.256} & $\mathbf{-0.047}$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.78\linewidth]{05_agent_vs_pipeline.png}
-\caption{Per-screen delta of the tool-using agent against the pipeline.
-It wins on exactly one screen and loses worst precisely where the ML signal is strongest
-(K562-Essential, K562-GWPS) --- given freedom, the LLM \emph{overrides} a well-calibrated model.}
-\label{fig:agent}
-\end{figure}
-
-The agent wins on exactly one screen (Scharenberg22, $+0.116$), where its runtime pathway-enrichment
-tool pays off, and loses most on the two genome-wide screens where the ML prior is strongest.
-The failure mode is instructive: given the freedom to act, the LLM overrides a model that is better
-calibrated than it is. \textbf{Constraining the LLM to a fixed fusion policy is not a limitation of
-the pipeline --- it is the reason the pipeline wins.}
-
-\subsection*{Transplanting the agent's one good idea}
-
-Since enrichment was the agent's only advantage, we transplanted it into the pipeline (Enrichr over
-the hits revealed so far, injected into the LLM prompt each round, gated to significant and coherent
-pathways), and separately tested an externalised \emph{skill library} distilled from past experiments.
-
-\begin{table}[H]
-\centering
-\caption{%
-  Agent-style augmentations of the pipeline, as \textbf{paired} deltas over the same runs.
-  Both are within noise of zero.
-}
-\label{tab:aug}
-\setlength{\tabcolsep}{8pt}
-\begin{tabular}{lccc}
-\toprule
-Augmentation & C & C\,$+$\,augmentation & $\Delta$ (paired) \\
-\midrule
-Runtime pathway enrichment (gated) & 0.260 & 0.263 & $+0.003$ \\
-Externalised skill library         & 0.258 & 0.259 & $+0.001$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Runtime enrichment captures the Scharenberg22 gain ($+0.061$ on that screen) without the collateral
-damage the free agent suffered, but nets only $+0.003$ overall: on genome-wide essentiality screens
-the enriched terms are highly significant yet \emph{non-selective} (ribosome, proteasome,
-spliceosome), so ``prioritise genes in these pathways'' barely narrows a 9{,}000-gene pool.
-The skill library adds $+0.001$. Together with the memory ablation ($+0.000$), this is a consistent
-negative result about \emph{externalisation}: memory, skills and retrieved pathways all add
-$\approx 0$ once the model already has its parametric knowledge plus the hits it has observed.
+\noindent Three supporting analyses are deferred to the Appendix: a test of whether the gain-of-function \emph{modality} explains Steinhart's name-dependence (it does not), the SHAP feature attributions of the ML score, and a freely-planning tool-using \emph{agent} that underperforms the fixed-fusion pipeline.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section*{Explainability: what is the LLM actually contributing?}
@@ -1387,5 +1211,191 @@ nine qualifies.
   \item \textbf{Nine screens, five seeds, no prospective wet-lab validation.} The arm is stochastic,
   which is why every component claim is reported as a \emph{paired} delta.
 \end{itemize}
+
+
+% ────────────────
+\section*{Appendix: supporting and legacy analyses}
+
+These analyses support the main results but are secondary to the paper's central line; the SHAP attributions and the component figures were computed on the legacy predecessor configuration (statistically close to the final system in aggregate, but not re-estimated under it).
+
+\subsection*{Testing the explanation: is it the gain-of-function modality? (No.)}
+
+The story above rests on a sample of one: Steinhart is the only gain-of-function (CRISPRa) screen in
+the benchmark, so ``gain-of-function makes the gene name matter'' is a hypothesis fitted to a single
+point. We tested it. The same study that supplied our IL-2 and IFN-$\gamma$ screens (Schmidt et al.,
+2022) ran \emph{both} a CRISPRi and a CRISPRa genome-wide screen for each cytokine, so the CRISPRa arm
+is the matched gain-of-function counterpart of two screens we already have. We onboarded
+\texttt{IL2\_crispra} and \texttt{IFNG\_crispra} from that arm, keeping everything fixed except the
+modality: the same anchor-relative features (they are modality-agnostic --- activating vs.\ silencing
+IL-2 biology shares the same anchors), the same hit convention, an activation-framed task prompt
+(``genes that, when \emph{over-expressed via CRISPRa}, regulate IL-2 production''), and --- because
+these large screens would otherwise route to the LLM-suppressed \texttt{ml\_heavy} regime --- the same
+fusion weight as Steinhart ($w_{\mathrm{LLM}}=0.4$).
+
+If gain-of-function were the cause, the gene name should be worth $\approx\!+0.08$ here too. It is not:
+
+\begin{center}\small
+\begin{tabular}{lcc}
+\toprule
+Screen (gain-of-function, CRISPRa) & name value (A2$-$A1) & cf.\ its CRISPRi twin \\
+\midrule
+\texttt{IL2\_crispra}  & $+0.002 \pm 0.003$ & $-0.050$ \\
+\texttt{IFNG\_crispra} & $-0.004 \pm 0.001$ & $+0.013$ \\
+\midrule
+\emph{Steinhart} (reference) & \emph{$+0.080 \pm 0.013$} & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+On both new gain-of-function screens the gene name is worth nothing, an order of magnitude below
+Steinhart. \textbf{Perturbation modality does not explain Steinhart's name-dependence.} The
+corrected-prompt run barely moved these numbers from a first run with a placeholder prompt, so this is
+not an artefact of under-specifying the task; the name simply does not help here.
+
+What \emph{does} distinguish Steinhart is the shape of its hit set: 145 concentrated hits (0.8\%)
+dominated by textbook exhaustion regulators (IRF4, TOX, \ldots) that a language model knows cold,
+against $\sim$900 diffuse top-movers ($\sim$5\%) on each CRISPRa cytokine screen, where recognizable
+names are a small minority. Our loss-of-function-trained prior also transfers poorly to CRISPRa hits
+(hit@R5 $\approx 0.12$ vs.\ $0.35$ on the CRISPRi twin), so the whole system is weak there. We leave the
+hit-set-concentration hypothesis untested. The operational consequence is clear enough, though:
+\textbf{we do not route by modality} --- the structure-only reasoning mode stays an opt-in choice, not
+a default triggered by whether a screen is CRISPRa.
+
+\subsection*{An accidental confirmation: the feature router already knew}
+
+The C-arm selects its feature set per screen. That router was tuned \emph{empirically}, by trying
+feature sets and keeping whatever scored best, long before we understood why. It converged on
+excluding \textbf{all four DepMap features} for exactly two screens --- Steinhart and K562-Essential
+--- because including them \emph{hurt}. The code comment recording this guessed at the reason
+(``DepMap disrupts online learning for GD2 biology''), and that guess was wrong: Steinhart does not
+measure GD2 biology at all (Table~\ref{tab:datasets}).
+
+The real reason is the one above. \textbf{Every DepMap feature is derived from knockout screens},
+and Steinhart is the one \emph{gain-of-function} (CRISPRa) screen: it asks which genes make CAR-T
+cells resist exhaustion \emph{when over-expressed}. A gene that is dispensable when deleted can be
+potent when over-expressed --- IRF4, among Steinhart's strongest hits, is essential in only 6\% of
+DepMap cell lines --- so a knockout-derived prior is not merely uninformative there, it is actively
+misleading, and the router learned to discard it.
+
+Reading the SHAP attributions back out confirms that this is what the model actually does:
+
+\begin{table}[H]
+\centering
+\caption{The ML model's most-used features, per screen (mean $|$SHAP$|$ over the genes it selected).
+DepMap essentiality dominates wherever it is available --- and is absent exactly where a
+knockout-derived prior does not transfer.}
+\label{tab:shap}
+\small
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{lll}
+\toprule
+Screen & Perturbation & Top features used by the ML model \\
+\midrule
+IFN-$\gamma$, IL-2, Carnevale22, & loss-of-function & \textbf{depmap\_frac\_ess} (rank 1), then PPI / pLI \\
+Scharenberg22, K562-GWPS & & \\
+\midrule
+\textbf{Steinhart} & \textbf{gain-of-function} & PPI, STRING degree, pathway counts --- \\
+ & (CRISPRa) & \textbf{no DepMap feature at all} \\
+\textbf{K562-Essential} & loss-of-function & PPI, STRING degree --- \textbf{no DepMap feature} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+This closes the loop on why Steinhart is the screen where the LLM matters most: it is precisely the
+screen where the ML model's single strongest feature family has been removed, leaving it with weak
+topological signal --- and the LLM's T-cell biology is what fills the gap.
+(K562-Essential drops DepMap for a different reason: it \emph{is} a curated essentiality screen, so a
+pan-cancer essentiality prior is close to a restatement of the label and adds nothing.)
+
+% ─────────────────────────────────────────────────────────────────────────────
+\subsection*{A freely planning tool-using agent underperforms the constrained pipeline}
+
+The natural next step from a pipeline is a \emph{tool-using agent} in the BioDiscoveryAgent /
+PerTurboAgent mould: let the LLM plan, call an ML-ranking tool and a pathway-enrichment tool, and
+commit a batch itself. We implemented exactly that (a task-specialised harness with a JSON action
+protocol; \texttt{ml\_rank} / \texttt{enrich} / \texttt{finish}; no agent framework) and benchmarked
+it against the pipeline on identical screens and budgets. We state the scope up front: this is one
+action set, one prompt, one stopping rule and one budget, so the result below is evidence that \emph{a
+freely planning agent does not beat the constrained fusion policy here}, not that tools are useless in
+general --- a different action schema or a policy that cannot override a confident ML score could
+close the gap.
+
+\begin{table}[H]
+\centering
+\caption{%
+  Tool-using agent vs.\ the deterministic pipeline (hit ratio @ R5).
+  The agent plans its own rounds and calls tools; the pipeline fuses online ML with LLM reasoning
+  under a fixed policy. The agent is \emph{worse on 8 of 9 screens}.
+}
+\label{tab:agent}
+\setlength{\tabcolsep}{8pt}
+\begin{tabular}{lccc}
+\toprule
+Dataset & Tool-using agent & Pipeline (C) & $\Delta$ \\
+\midrule
+Scharenberg22  & \best{0.582} & 0.465 & \gain{$+0.116$} \\
+Carnevale22    & 0.044 & \best{0.056} & $-0.012$ \\
+IFN-$\gamma$   & 0.163 & \best{0.190} & $-0.027$ \\
+Sanchez21       & 0.059 & \best{0.087} & $-0.029$ \\
+Sanchez21 (dn) & 0.049 & \best{0.099} & $-0.050$ \\
+Steinhart      & 0.100 & \best{0.159} & $-0.059$ \\
+IL-2           & 0.264 & \best{0.347} & $-0.083$ \\
+K562-GWPS      & 0.209 & \best{0.347} & \drop{$-0.138$} \\
+K562-Essential & 0.413 & \best{0.556} & \drop{$-0.143$} \\
+\midrule
+\textbf{Average} & 0.209 & \best{0.256} & $\mathbf{-0.047}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\linewidth]{05_agent_vs_pipeline.png}
+\caption{Per-screen delta of the tool-using agent against the pipeline.
+It wins on exactly one screen and loses worst precisely where the ML signal is strongest
+(K562-Essential, K562-GWPS) --- given freedom, the LLM \emph{overrides} a well-calibrated model.}
+\label{fig:agent}
+\end{figure}
+
+The agent wins on exactly one screen (Scharenberg22, $+0.116$), where its runtime pathway-enrichment
+tool pays off, and loses most on the two genome-wide screens where the ML prior is strongest.
+The failure mode is instructive: given the freedom to act, the LLM overrides a model that is better
+calibrated than it is. \textbf{Constraining the LLM to a fixed fusion policy is not a limitation of
+the pipeline --- it is the reason the pipeline wins.}
+
+\subsection*{Transplanting the agent's one good idea}
+
+Since enrichment was the agent's only advantage, we transplanted it into the pipeline (Enrichr over
+the hits revealed so far, injected into the LLM prompt each round, gated to significant and coherent
+pathways), and separately tested an externalised \emph{skill library} distilled from past experiments.
+
+\begin{table}[H]
+\centering
+\caption{%
+  Agent-style augmentations of the pipeline, as \textbf{paired} deltas over the same runs.
+  Both are within noise of zero.
+}
+\label{tab:aug}
+\setlength{\tabcolsep}{8pt}
+\begin{tabular}{lccc}
+\toprule
+Augmentation & C & C\,$+$\,augmentation & $\Delta$ (paired) \\
+\midrule
+Runtime pathway enrichment (gated) & 0.260 & 0.263 & $+0.003$ \\
+Externalised skill library         & 0.258 & 0.259 & $+0.001$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Runtime enrichment captures the Scharenberg22 gain ($+0.061$ on that screen) without the collateral
+damage the free agent suffered, but nets only $+0.003$ overall: on genome-wide essentiality screens
+the enriched terms are highly significant yet \emph{non-selective} (ribosome, proteasome,
+spliceosome), so ``prioritise genes in these pathways'' barely narrows a 9{,}000-gene pool.
+The skill library adds $+0.001$. Together with the memory ablation ($+0.000$), this is a consistent
+negative result about \emph{externalisation}: memory, skills and retrieved pathways all add
+$\approx 0$ once the model already has its parametric knowledge plus the hits it has observed.
+
 
 \end{document}
