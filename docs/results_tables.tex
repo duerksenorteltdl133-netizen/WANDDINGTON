@@ -120,9 +120,10 @@ reason-vs-recall probe. Read the anchor features below, therefore, as historical
 the reported prior.
 
 The \textbf{cross-experiment prior} is a leave-one-out (LOO) LightGBM classifier: to score a target
-screen it is trained on the \emph{other} screens' hit labels using the features above, with
-\texttt{scale\_pos\_weight} correcting the $\sim$5\% class imbalance (300 trees, learning rate 0.05, 31
-leaves). This prior --- with no LLM and no in-experiment data --- is what the external comparison
+screen it is trained on the \emph{other} screens' hit labels using the screen-appropriate subset defined
+by the final feature policy --- gene-intrinsic features and metadata-selected DepMap features, with no
+anchor-relative features --- with \texttt{scale\_pos\_weight} correcting the $\sim$5\% class imbalance
+(300 trees, learning rate 0.05, 31 leaves). This prior --- with no LLM and no in-experiment data --- is what the external comparison
 (Table~\ref{tab:external}) shows already exceeds the strongest single-experiment baseline by $\sim$0.08,
 because it transfers labels across screens that GeneDisco and BioDiscoveryAgent cannot.
 
@@ -201,8 +202,9 @@ rate --- a statistic of the test set, determining the route on seven of the nine
 privileged anchor features. That is precisely why the reported system uses neither. Fixing the weight
 without target-screen outcomes (on the training screens) and the feature policy from pre-experiment
 metadata, and dropping the anchor features, reaches $0.251$, with no detected difference from the routed
-$0.256$ (paired $-0.005$, CI $[\!-\!0.018,0.007]$), and still beats the routing-free LOO prior by
-$+0.034$ on 8 of 9 screens (\S\ref{sec:honest-router}). The main external claim never used the router
+$0.256$ (paired $-0.005$, CI $[\!-\!0.018,0.007]$). It improves over its \emph{matched} static prior by
+$+0.020$; relative to the differently-configured benchmark LOO baseline the difference is $+0.034$
+(\S\ref{sec:honest-router}). The main external claim never used the router
 anyway: the cross-experiment prior that beats single-experiment active learning and LLM agents ($0.187$
 vs.\ $\approx\!0.11$, Table~\ref{tab:external}) is the routing-free static LOO-LightGBM. We keep the legacy
 variant only because the detailed ablations, attribution, and SHAP were computed on this near-performing
@@ -479,9 +481,11 @@ A novel-hit analysis explains the mechanism: the prior's gains sit on screens wh
 phenotype-specific hits (Carnevale22 80\% novel, Sanchez21 72\%). \textbf{The cross-experiment prior
 succeeds by exploiting recurrence and essentiality, not by discovering new phenotype-specific biology.}
 
-This qualifies but does not overturn the headline. Even after all three corrections --- siblings excluded
-(0.182), DepMap removed (0.219), or anchor features removed (0.228) --- the prior stays well above the
-single-experiment methods ($\sim$0.11, Table~\ref{tab:external}). The honest claim is therefore narrower and, we think, more
+This qualifies but does not overturn the headline. Across their respective evaluation sets, all three
+corrections --- siblings excluded ($0.182$), DepMap removed ($0.219$), anchor features removed ($0.228$)
+--- leave a substantial transferable signal; because these are measured on different screen subsets, we do
+not read them as a single numeric hierarchy against the $\sim\!0.11$ single-experiment methods
+(Table~\ref{tab:external}). The honest claim is therefore narrower and, we think, more
 useful: \emph{a screen's hits are substantially predictable from other screens' labels, largely through
 recurrence and essentiality} --- which no within-experiment active learner or LLM agent can see --- but
 this prior is not a discovery engine for genuinely new biology. We tested directly whether the
@@ -818,14 +822,14 @@ and lets it induce a decision boundary. To test whether the \emph{LLM} is what m
 with the most trivial boundary imaginable and change nothing else: score each candidate by its
 projection onto the (hit-centroid $-$ non-hit-centroid) axis in the identical anonymized feature space,
 take the top $B$, no language model (round~1 falls back to the static ranking, exactly as A1 pads). This
-one-line rule scores \textbf{0.268} averaged over the nine screens --- it \emph{matches}, and marginally
-exceeds, A1's 0.265, screen by screen (K562-Essential 0.587 vs.\ 0.597, Scharenberg22 0.571 vs.\ 0.584,
-Steinhart 0.083 vs.\ 0.065, IL-2 0.351 vs.\ 0.343). So A1 is \textbf{not} evidence that the LLM reasons:
+one-line rule scores \textbf{0.268} averaged over the nine screens --- a \emph{slightly higher mean} than
+A1's 0.265, with mixed per-screen differences (K562-Essential 0.587 vs.\ 0.597, Scharenberg22 0.571 vs.\
+0.584, Steinhart 0.083 vs.\ 0.065, IL-2 0.351 vs.\ 0.343). So A1 is \textbf{not} evidence that the LLM reasons:
 the value is that the structural features are linearly separable, and a centroid rule extracts it as
 well as a language model does. What the decomposition establishes is therefore narrower --- and cleaner
---- than ``the LLM reasons'': it is that \emph{the gene name is dispensable once the structure is
-supplied}, with the LLM merely one (here interchangeable, and strictly unnecessary) way to map that
-structure to a choice.
+--- than ``the LLM reasons'': the result is \emph{consistent with gene-name dispensability on average
+under this feature representation}, with the LLM merely one (here interchangeable, and strictly
+unnecessary) way to map that structure to a choice.
 
 \paragraph{Do these features smuggle in privileged information?} The structural features include the
 anchor-relative ones the leakage audit flagged as privileged (51\% of anchors are themselves target
@@ -1091,7 +1095,7 @@ nine qualifies.
 % ────────────────
 \section*{Appendix: supporting and legacy analyses}
 
-These analyses support the main results but are secondary to the paper's central line; the SHAP attributions and the component figures were computed on the legacy predecessor configuration (statistically close to the final system in aggregate, but not re-estimated under it).
+These analyses support the main results but are secondary to the paper's central line; the SHAP attributions and the component figures were computed on the legacy predecessor configuration (no detected difference from the final system in aggregate, but not re-estimated under it).
 
 \subsection*{Legacy component decomposition and ablation}
 
@@ -1259,9 +1263,9 @@ corrected-prompt run barely moved these numbers from a first run with a placehol
 not an artefact of under-specifying the task; the name simply does not help here.
 
 What \emph{does} distinguish Steinhart is the shape of its hit set: 145 concentrated hits (0.8\%)
-dominated by textbook exhaustion regulators (IRF4, TOX, \ldots) that a language model knows cold,
-against $\sim$900 diffuse top-movers ($\sim$5\%) on each CRISPRa cytokine screen, where recognizable
-names are a small minority. Our loss-of-function-trained prior also transfers poorly to CRISPRa hits
+dominated by canonical exhaustion regulators (IRF4, TOX, \ldots) with highly recognizable gene-name
+semantics, against $\sim$900 diffuse top-movers ($\sim$5\%) on each CRISPRa cytokine screen, where
+recognizable names are a small minority. Our loss-of-function-trained prior also transfers poorly to CRISPRa hits
 (hit@R5 $\approx 0.12$ vs.\ $0.35$ on the CRISPRi twin), so the whole system is weak there. We leave the
 hit-set-concentration hypothesis untested. The operational consequence is clear enough, though:
 \textbf{we do not route by modality} --- the structure-only reasoning mode stays an opt-in choice, not
@@ -1308,9 +1312,9 @@ Scharenberg22, K562-GWPS & & \\
 \end{table}
 
 \noindent
-This closes the loop on why Steinhart is the screen where the LLM matters most: it is precisely the
-screen where the ML model's single strongest feature family has been removed, leaving it with weak
-topological signal --- and a gene-name-conditioned parametric signal appears to fill part of the gap,
+This offers a plausible explanation for why Steinhart is the screen where the LLM matters most: it is
+precisely the screen where the ML model's single strongest feature family has been removed, leaving it with
+weak topological signal --- and a gene-name-conditioned parametric signal appears to fill part of the gap,
 although its origin cannot be distinguished from memorized associations.
 (K562-Essential drops DepMap for a different reason: it \emph{is} a curated essentiality screen, so a
 pan-cancer essentiality prior is close to a restatement of the label and adds nothing.)
@@ -1331,7 +1335,7 @@ close the gap.
 \begin{table}[H]
 \centering
 \caption{%
-  Tool-using agent vs.\ the deterministic pipeline (hit ratio @ R5).
+  Tool-using agent vs.\ the fixed-policy constrained pipeline (hit ratio @ R5).
   The agent plans its own rounds and calls tools; the pipeline fuses online ML with constrained LLM
   endorsement under a fixed policy. The agent is \emph{worse on 8 of 9 screens}.
 }
@@ -1369,7 +1373,8 @@ The agent wins on exactly one screen (Scharenberg22, $+0.116$), where its runtim
 tool pays off, and loses most on the two genome-wide screens where the ML prior is strongest.
 The failure mode is instructive: given the freedom to act, the LLM overrides a model that is better
 calibrated than it is. \textbf{Constraining the LLM to a fixed fusion policy is not a limitation of
-the pipeline --- it is the reason the pipeline wins.}
+the pipeline --- it appears to be the reason the pipeline wins under this tested harness} (one action
+schema, prompt, stopping rule, and budget).
 
 \subsection*{Transplanting the agent's one good idea}
 
