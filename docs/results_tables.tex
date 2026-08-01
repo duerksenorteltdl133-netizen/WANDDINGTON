@@ -25,8 +25,8 @@ experimental feedback each round, updates its actions across rounds, and is driv
 natural-language conversational interface with the researcher. \emph{Constrained conversational}
 signals what it is \emph{not} --- a freely planning tool-using agent. Its policy deliberately confines the
 LLM to \emph{verifying and re-ranking} candidates proposed by a calibrated ML model rather than choosing
-genes on its own; the paper's central finding (\S``a freely planning tool-using agent underperforms'')
-is that this constraint is what makes it work.}\\
+genes on its own. Supporting experiments further show that, under the tested action schema and budget, a
+freely planning tool-using variant underperforms the constrained policy (Appendix).}\\
 \large Method, results, and figures}
 \date{}
 
@@ -46,21 +46,19 @@ leakage-free system.) To place this against prior work we ran both relevant line
 under identical evaluation: BioDiscoveryAgent's LLM agent scores 0.105 and GeneDisco's active-learning
 acquisition functions 0.113 on the six shared screens --- yet our leave-one-out prior, a static model
 with \emph{no} LLM, reaches 0.187, beating both. The differentiator is therefore a cross-experiment
-prior, not the agent: both prior methods learn only within a single screen. A simple cross-screen
-hit-frequency baseline matches the learned prior, so most of this transferred signal is recurrent hits
-and generic essentiality, not novel phenotype-specific biology. Counterfactual attribution explains why
-the LLM helps at all --- it is a strong \emph{verifier} but a weak proposer: after adjusting for the ML
-score, endorsement still predicts hits (adjusted odds ratio $1.68$, $95\%$ CI $[1.05, 2.52]$),
-concentrated in the top ML-score tertile where endorsed genes hit at $43.1\%$ vs.\ $17.4\%$; so, in our
-tested setup (one action set, prompt, and budget), adding tools, explicit memory, or unconstrained action
-selection does not help. Finally, replacing every gene name with an anonymous identifier and supplying
-structural features instead yields \emph{similar mean performance} to the real-name condition, with no
-detected difference --- and this holds after the anchor-relative features later identified as privileged
-are removed (structure vs.\ names, paired $-0.007$, $95\%$ CI $[\!-\!0.041, 0.029]$, which does not
-establish formal equivalence); a trivial linear rule on those features does about as well as the LLM. The
-results are thus \emph{consistent with structure-sufficiency}, not LLM reasoning per se, though individual
-tasks such as Steinhart still benefit from gene-name semantics and we cannot separate biological knowledge
-from memorisation. We ship the anonymized mode as an opt-in.
+prior, not the agent: both prior methods learn only within a single screen. That prior is largely a
+\emph{recurrence} prior --- a simple cross-screen hit-frequency ranking matches the learned model (its
+signal is recurrent hits and generic essentiality, not novel phenotype-specific biology). \textbf{Against
+its matched static prior, Waddington improves hit@R5 from $0.231$ to $0.251$ ($+0.020$, $95\%$ CI
+$[0.007, 0.035]$); but replacing that prior with the pure hit-frequency ranking yields no advantage over
+recurrence alone ($0.239$ vs.\ $0.243$).} Counterfactual attribution places the LLM as a \emph{verifier},
+not a proposer: after adjusting for the ML score, endorsement still predicts hits (adjusted odds ratio
+$1.68$, $95\%$ CI $[1.05, 2.52]$), concentrated among top-tertile ML candidates ($43.1\%$ vs.\ $17.4\%$),
+while giving it tools, explicit memory, or free choice does not help in our setup. Finally, anonymizing
+gene names and supplying structural features instead gives similar mean performance (no detected
+difference, also without the privileged anchor features), consistent with structure-sufficiency rather
+than LLM reasoning per se --- though Steinhart still benefits from gene-name semantics and we cannot
+separate biological knowledge from memorisation. We ship the anonymized mode as an opt-in.
 \end{abstract}
 
 \noindent
@@ -135,8 +133,8 @@ Each round the C-arm forms a batch by combining two components that see the same
 \paragraph{Component A --- online ML.} An adaptive LightGBM ranker. In round 1 it \emph{is} the LOO
 prior (no in-experiment data yet); from round 2 it is retrained on the LOO data \emph{plus} the
 in-experiment revealed $(\text{gene}, \text{label})$ pairs, once at least $8$ genes have been revealed,
-and re-ranks the whole pool by predicted hit probability. This online retraining is the single most
-valuable component (Table~\ref{tab:ablation}).
+and re-ranks the whole pool by predicted hit probability. In the legacy predecessor's paired ablation,
+removing this online retraining produced the largest average loss (Appendix, Table~\ref{tab:ablation}).
 
 \paragraph{Component B --- LLM endorsement (candidate verification).} A tool-less LLM (Claude Haiku 4.5,
 temperature $0$) is
@@ -207,8 +205,8 @@ $0.256$ (paired $-0.005$, CI $[\!-\!0.018,0.007]$), and still beats the routing-
 $+0.034$ on 8 of 9 screens (\S\ref{sec:honest-router}). The main external claim never used the router
 anyway: the cross-experiment prior that beats single-experiment active learning and LLM agents ($0.187$
 vs.\ $\approx\!0.11$, Table~\ref{tab:external}) is the routing-free static LOO-LightGBM. We keep the legacy
-variant only because the detailed ablations, attribution, and SHAP were computed on it (statistically
-identical).
+variant only because the detailed ablations, attribution, and SHAP were computed on this near-performing
+predecessor and are retained as supporting analyses.
 
 \paragraph{Design principle.} Throughout, the LLM \emph{re-weights a calibrated model's candidates}
 rather than choosing genes freely. This is deliberate: the attribution analysis
@@ -412,8 +410,8 @@ active learning $\approx$ BDA agent $\approx$ 0.11) $<$ a cross-experiment super
 $<$ that prior plus online adaptation and LLM verification (C, 0.217 here; 0.251 over all nine screens,
 Table~\ref{tab:main}) --- not ``our agent beats their agent''. Two per-screen notes,
 both consistent with the rest of the paper: controlled BDA does its best relative to random on Steinhart
-(0.117, above even our LOO's 0.076), the CRISPRa screen where parametric biology is what the ML prior
-lacks; and GeneDisco's within-experiment active learning is \emph{not} weak everywhere --- on the
+(0.117, above even our LOO's 0.076), the CRISPRa screen where the ML prior's knockout-derived features
+have least to say; and GeneDisco's within-experiment active learning is \emph{not} weak everywhere --- on the
 high-hit-rate K562-Essential (outside the shared six) it reaches 0.651, above even our C --- it fails
 only where the hit rate is low and a prior matters most.
 
@@ -642,13 +640,13 @@ that also denies the prior its siblings. Reproduce with
 \texttt{python -m waddington\_select.analysis.router\_analysis} and \texttt{.final\_system\_stats}.}
 \label{tab:honest_router}
 \small
-\setlength{\tabcolsep}{5pt}
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lccc}
 \toprule
-Configuration & mean & \multicolumn{1}{c}{$\Delta$ vs.\ LOO (W/T/L)} & \multicolumn{1}{c}{$\Delta$ vs.\ legacy C (W/T/L)} \\
+Configuration & mean & \multicolumn{1}{c}{$\Delta$ vs.\ stated ref.\ (W/T/L)} & \multicolumn{1}{c}{$\Delta$ vs.\ legacy C (W/T/L)} \\
 \midrule
-Differently-configured LOO baseline (external) & 0.217 & --- & \\
-\textbf{Matched} final-config static prior (no anchor, metadata) & \textbf{0.231} & --- & \\
+Differently-configured LOO (external) & 0.217 & --- & \\
+\textbf{Matched} final-config prior (no-anchor) & \textbf{0.231} & --- & \\
 Legacy routed C (\emph{uses realized $hr$})   & 0.256 & $+0.039$\,{\tiny$[.019,.062]$}\,9/0/0 & --- \\
 \midrule
 \textbf{Final Waddington} (\textbf{no anchor feats}) & \textbf{0.251} & $+0.020^{*}$\,{\tiny$[.007,.035]$}\,7/0/2 & $-0.005$\,{\tiny$[\!-\!.018,.007]$}\,3/0/6 \\
@@ -741,132 +739,7 @@ the largest loss in this legacy ablation.}
 \label{fig:heatmap}
 \end{figure}
 
-% ─────────────────────────────────────────────────────────────────────────────
-% TABLE 3  Architecture progression
-% ─────────────────────────────────────────────────────────────────────────────
-\begin{table}[H]
-\centering
-\caption{%
-  Stepwise improvement in average hit ratio at round 5 (9 datasets, 5 seeds).
-  Each row introduces one additional component over the previous configuration.
-  The final row is the \emph{legacy} routed C-arm (0.256), used here for the component decomposition; the
-  final leakage-free system (0.251, Table~\ref{tab:main}$^\ddagger$) shows no detected difference in
-  aggregate, but the per-component deltas were not re-estimated under it.
-}
-\label{tab:progression}
-\begin{tabular}{llcc}
-\toprule
-Configuration & Key addition & avg hit@R5 & $\Delta$ \\
-\midrule
-Random                              & —                              & 0.066 & — \\
-Coreset (A)                         & Diversity-maximising selection  & 0.134 & +0.068 \\
-LOO-LightGBM (static)               & Cross-expt.\ ML prior           & 0.217 & +0.083 \\
-OnlineAdaptive                      & In-expt.\ ML retraining         & 0.224 & +0.007 \\
-LLM branch (B)                      & LLM naming $+$ static-prior padding & 0.225 & (\textit{parallel branch}) \\
-C\,$-$\,ML (static LOO\,+\,LLM)    & Combine LOO prior with LLM      & 0.247 & +0.022 vs.\ B \\
-\textbf{Waddington (C, legacy)}     & Add online ML retraining        & \textbf{0.256} & +0.009 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-This legacy stepwise analysis suggests that the cross-experiment prior is the dominant source of
-performance (+0.083), while LLM endorsement (+0.022 when combined with the LOO prior) and online ML
-retraining (+0.009) provide smaller increments under that configuration. These quantities are descriptive
-rather than a formal additive decomposition (the rows add components sequentially, the LLM is a parallel
-branch, and the comparisons are on the legacy configuration).
-The explicit cross-experiment memory module provides no measurable gain in this leave-one-out benchmark
-(paired ablation, Table~\ref{tab:ablation}); this is consistent with redundancy with the LLM's parametric
-knowledge, but could also reflect ineffective retrieval or use of the memory entries.
-
-% ─────────────────────────────────────────────────────────────────────────────
-% TABLE 4  Ablation study  (PAIRED)
-% ─────────────────────────────────────────────────────────────────────────────
-\begin{table}[H]
-\centering
-\caption{%
-  Ablation study, reported as \textbf{paired} deltas $\Delta = \text{variant} - \text{C}$, where C is
-  the full arm \emph{re-run inside the same experiment} (same seeds, same LLM sampling).
-  This matters: the arm is stochastic, so the C baseline re-runs to 0.259--0.262 across the ablation
-  experiments rather than exactly 0.256, and comparing a variant against C from a \emph{different}
-  run systematically understates every component.
-  \textbf{C\,$-$\,Mem}: cross-experiment memory removed from the LLM prompt.
-  \textbf{C\,$-$\,LLM}: LLM removed; online ML only.
-  \textbf{C\,$-$\,ML}: ML frozen at the LOO prior; no in-experiment retraining.
-  \textbf{Shuffled}: gene names shown to the LLM replaced with anonymous identifiers
-  (\texttt{GENE\_00001},~\ldots).
-  \drop{Red} = the component is load-bearing (removing it hurts); \gain{blue} = removing it helps.
-}
-\label{tab:ablation}
-\setlength{\tabcolsep}{7pt}
-\begin{tabular}{lcccc}
-\toprule
-Dataset & $\Delta$ C\,$-$\,Mem & $\Delta$ C\,$-$\,LLM & $\Delta$ C\,$-$\,ML & $\Delta$ Shuffled \\
-\midrule
-IFN-$\gamma$   & $+0.003$ & $+0.000$ & \drop{$-0.013$} & \drop{$-0.015$} \\
-IL-2           & \drop{$-0.013$} & $-0.002$ & $+0.002$ & $-0.005$ \\
-Sanchez21       & $+0.004$ & $+0.010$ & \drop{$-0.010$} & $-0.008$ \\
-Sanchez21 (dn) & $-0.005$ & $-0.003$ & \drop{$-0.010$} & $-0.004$ \\
-Carnevale22    & $-0.002$ & $-0.003$ & $+0.006$ & $+0.001$ \\
-Scharenberg22  & $+0.012$ & \gain{$+0.114$} & \drop{$-0.016$} & \gain{$+0.078$} \\
-Steinhart      & $-0.008$ & \drop{$-0.059$} & $-0.004$ & \drop{$-0.084$} \\
-K562-Essential & $+0.016$ & \drop{$-0.127$} & \drop{$-0.025$} & \drop{$-0.051$} \\
-K562-GWPS      & $-0.004$ & $-0.004$ & \drop{$-0.038$} & $-0.004$ \\
-\midrule
-\textbf{Average (paired)} & $\mathbf{+0.000}$ & $\mathbf{-0.008}$ & $\mathbf{-0.012}$ & $\mathbf{-0.010}$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\paragraph{Memory ($\Delta = +0.000$).}
-Removing the cross-experiment memory prompt changes nothing: the paired average is exactly zero.
-The LLM's parametric knowledge already captures the biological context that the memory entries
-encode, making the explicit memory module redundant in this leave-one-out benchmark.
-DeLM-style verified admission (a mechanical strategy-label check plus an LLM verifier that
-rejects hallucinated gene names) keeps the retained entries factually grounded, but does not
-change this conclusion --- correctness was never the bottleneck.
-
-\paragraph{Online ML retraining ($\Delta = -0.012$).}
-Freezing the ML model at the LOO prior produces the most consistent degradation of any ablation:
-it hurts on 7 of 9 screens, with the largest losses on K562-GWPS ($-0.038$) and
-K562-Essential ($-0.025$).
-In the legacy predecessor's paired ablation, removing online retraining produced the largest average loss.
-
-\paragraph{The ``LLM'' branch ($\Delta = -0.008$ on average, but bimodal) --- and an important caveat.}
-C\,$-$\,LLM removes the entire LLM-branch endorsement term from the fusion. That term is \emph{not}
-purely the LLM: it also carries the static-ML padding described in Table~\ref{tab:main}$^\dagger$.
-The two screens with the largest effects are exactly the two with the most padding, so they must be
-read carefully:
-\begin{itemize}\itemsep2pt
-  \item \textbf{K562-Essential ($-0.127$): this is \emph{not} evidence for LLM biology.} 86\% of the
-  branch's genes there come from the static LOO ranker (the LLM names almost nothing that exists in
-  the 623-gene pool). What the ablation removes is the \emph{static cross-experiment prior} being
-  blended into the online model --- a real and valuable signal, but not LLM reasoning. We retract the
-  earlier reading of this number.
-  \item \textbf{Scharenberg22 ($+0.114$ when removed):} 68\% padding, so ``the LLM hurts here'' is
-  likewise mostly ``the static prior hurts here'', conflicting with an unusually strong online ML
-  signal (LOO AUC $=0.825$ on K562 DepMap features).
-  \item \textbf{Steinhart ($-0.059$): this one does survive.} Padding is 43\%, so a majority of the
-  branch is genuine LLM naming, and the gene-name ablation below independently confirms it.
-\end{itemize}
-
-\noindent
-Steinhart is also where one would \emph{predict} the LLM to matter most, for a reason visible in
-Table~\ref{tab:datasets}: it is the gain-of-function (CRISPRa) screen, asking which genes make CAR-T
-cells resist exhaustion \emph{when over-expressed}, whereas every DepMap feature we use is derived
-from \emph{knockout} screens. A gene that is dispensable when deleted can still be potent when
-over-expressed --- IRF4, one of Steinhart's strongest hits, is essential in only 6\% of DepMap cell
-lines --- so the ML prior has little to say there, and the LLM's gene-name-conditioned parametric signal
-appears to fill part of the gap, although we cannot distinguish biological generalization from memorized
-associations. Consistently, Steinhart has both the lowest hit rate of the nine screens (0.8\%) and the
-largest gene-name-shuffle penalty ($-0.084$).
-
-\paragraph{Gene-name semantics ($\Delta = -0.010$; $-0.084$ on Steinhart) --- a probe of dependence on gene-name semantics.}
-This ablation is immune to the padding confound in a way C\,$-$\,LLM is not: the branch is still
-present and still padded, but the LLM can no longer recognise the genes it is naming. Performance
-collapses on Steinhart ($-0.084$) and drops on K562-Essential ($-0.051$), so the LLM's contribution
-on pathway-specific tasks is mediated by the \emph{gene names} rather than by the task description or by
-experimental feedback --- though whether that name-conditioned signal reflects biological generalization
-or memorized associations, this ablation cannot say. Scharenberg22 again improves ($+0.078$).
+\noindent In the legacy predecessor, removing online retraining produced the largest average loss, while the LLM-branch ablation was strongly confounded by static-prior padding. Gene-name shuffling reduced average performance by $0.010$ (and by $0.084$ on Steinhart), motivating the controlled structure-versus-name experiment below; the full stepwise decomposition and per-screen ablation tables are in the Appendix (Tables~\ref{tab:progression}--\ref{tab:ablation}).
 
 \subsection*{Reasoning vs.\ recall: can structure replace the gene name?}
 
@@ -962,8 +835,9 @@ removed. It does not. Re-running the ladder in the anchor-free feature space, st
 $[\!-\!0.041, 0.029]$; no detected difference, though the interval does not establish equivalence) --- and
 the linear rule does about as well as the LLM ($0.257$; $+0.008$ vs.\ names). Removing the privileged
 features lowers both structure arms in step (they were the strongest single family), so the
-\emph{contrast} is preserved: the gene name remains dispensable even when the structure the LLM sees
-contains no target-hit leakage. (Reproduce with \texttt{WADDINGTON\_DROP\_ANCHOR\_FEATS=1}.)
+\emph{contrast} is preserved: these results are consistent with gene-name dispensability on average under
+the tested feature representation, even when the structure the LLM sees contains no target-hit leakage.
+(Reproduce with \texttt{WADDINGTON\_DROP\_ANCHOR\_FEATS=1}.)
 
 \noindent
 That average, however, hides a bimodality that is the whole point:
@@ -981,7 +855,8 @@ That average, however, hides a bimodality that is the whole point:
 
 \noindent
 So substituting structure for the gene name is achievable and essentially free on eight of nine
-screens, and impossible on the one screen where biology is doing real work. We read this as a limit of
+screens. Steinhart is the clearest exception, where the available structural features do not recover the
+benefit associated with gene-name semantics. We read this as a limit of
 what our feature table \emph{contains}, not as proof that structure cannot suffice: our features are
 anchor-relative PPI / co-expression / pathway overlap plus constraint and essentiality, and none of
 them encodes the specific T-cell biology Steinhart rewards. The obvious reading of the bullet above ---
@@ -1218,6 +1093,136 @@ nine qualifies.
 
 These analyses support the main results but are secondary to the paper's central line; the SHAP attributions and the component figures were computed on the legacy predecessor configuration (statistically close to the final system in aggregate, but not re-estimated under it).
 
+\subsection*{Legacy component decomposition and ablation}
+
+These tables quantify each component on the legacy predecessor configuration (not re-estimated under the final system); they motivate the reason-vs-recall analysis in the main text.
+
+% ─────────────────────────────────────────────────────────────────────────────
+% TABLE 3  Architecture progression
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{table}[H]
+\centering
+\caption{%
+  Stepwise improvement in average hit ratio at round 5 (9 datasets, 5 seeds).
+  Each row introduces one additional component over the previous configuration.
+  The final row is the \emph{legacy} routed C-arm (0.256), used here for the component decomposition; the
+  final leakage-free system (0.251, Table~\ref{tab:main}$^\ddagger$) shows no detected difference in
+  aggregate, but the per-component deltas were not re-estimated under it.
+}
+\label{tab:progression}
+\begin{tabular}{llcc}
+\toprule
+Configuration & Key addition & avg hit@R5 & $\Delta$ \\
+\midrule
+Random                              & —                              & 0.066 & — \\
+Coreset (A)                         & Diversity-maximising selection  & 0.134 & +0.068 \\
+LOO-LightGBM (static)               & Cross-expt.\ ML prior           & 0.217 & +0.083 \\
+OnlineAdaptive                      & In-expt.\ ML retraining         & 0.224 & +0.007 \\
+LLM branch (B)                      & LLM naming $+$ static-prior padding & 0.225 & (\textit{parallel branch}) \\
+C\,$-$\,ML (static LOO\,+\,LLM)    & Combine LOO prior with LLM      & 0.247 & +0.022 vs.\ B \\
+\textbf{Waddington (C, legacy)}     & Add online ML retraining        & \textbf{0.256} & +0.009 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This legacy stepwise analysis suggests that the cross-experiment prior is the dominant source of
+performance (+0.083), while LLM endorsement (+0.022 when combined with the LOO prior) and online ML
+retraining (+0.009) provide smaller increments under that configuration. These quantities are descriptive
+rather than a formal additive decomposition (the rows add components sequentially, the LLM is a parallel
+branch, and the comparisons are on the legacy configuration).
+The explicit cross-experiment memory module provides no measurable gain in this leave-one-out benchmark
+(paired ablation, Table~\ref{tab:ablation}); this is consistent with redundancy with the LLM's parametric
+knowledge, but could also reflect ineffective retrieval or use of the memory entries.
+
+% ─────────────────────────────────────────────────────────────────────────────
+% TABLE 4  Ablation study  (PAIRED)
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{table}[H]
+\centering
+\caption{%
+  Ablation study, reported as \textbf{paired} deltas $\Delta = \text{variant} - \text{C}$, where C is
+  the full arm \emph{re-run inside the same experiment} (same seeds, same LLM sampling).
+  This matters: the arm is stochastic, so the C baseline re-runs to 0.259--0.262 across the ablation
+  experiments rather than exactly 0.256, and comparing a variant against C from a \emph{different}
+  run systematically understates every component.
+  \textbf{C\,$-$\,Mem}: cross-experiment memory removed from the LLM prompt.
+  \textbf{C\,$-$\,LLM}: LLM removed; online ML only.
+  \textbf{C\,$-$\,ML}: ML frozen at the LOO prior; no in-experiment retraining.
+  \textbf{Shuffled}: gene names shown to the LLM replaced with anonymous identifiers
+  (\texttt{GENE\_00001},~\ldots).
+  \drop{Red} = the component is load-bearing (removing it hurts); \gain{blue} = removing it helps.
+}
+\label{tab:ablation}
+\setlength{\tabcolsep}{7pt}
+\begin{tabular}{lcccc}
+\toprule
+Dataset & $\Delta$ C\,$-$\,Mem & $\Delta$ C\,$-$\,LLM & $\Delta$ C\,$-$\,ML & $\Delta$ Shuffled \\
+\midrule
+IFN-$\gamma$   & $+0.003$ & $+0.000$ & \drop{$-0.013$} & \drop{$-0.015$} \\
+IL-2           & \drop{$-0.013$} & $-0.002$ & $+0.002$ & $-0.005$ \\
+Sanchez21       & $+0.004$ & $+0.010$ & \drop{$-0.010$} & $-0.008$ \\
+Sanchez21 (dn) & $-0.005$ & $-0.003$ & \drop{$-0.010$} & $-0.004$ \\
+Carnevale22    & $-0.002$ & $-0.003$ & $+0.006$ & $+0.001$ \\
+Scharenberg22  & $+0.012$ & \gain{$+0.114$} & \drop{$-0.016$} & \gain{$+0.078$} \\
+Steinhart      & $-0.008$ & \drop{$-0.059$} & $-0.004$ & \drop{$-0.084$} \\
+K562-Essential & $+0.016$ & \drop{$-0.127$} & \drop{$-0.025$} & \drop{$-0.051$} \\
+K562-GWPS      & $-0.004$ & $-0.004$ & \drop{$-0.038$} & $-0.004$ \\
+\midrule
+\textbf{Average (paired)} & $\mathbf{+0.000}$ & $\mathbf{-0.008}$ & $\mathbf{-0.012}$ & $\mathbf{-0.010}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Memory ($\Delta = +0.000$).}
+Removing the cross-experiment memory prompt changes nothing: the paired average is exactly zero.
+The explicit memory module provided no measurable gain in this setup. This may reflect redundancy with
+the LLM's parametric knowledge, but ineffective retrieval, presentation, or use of the entries cannot be
+excluded. DeLM-style verified admission (a mechanical strategy-label check plus an LLM verifier that
+rejects hallucinated gene names) keeps the retained entries factually grounded.
+
+\paragraph{Online ML retraining ($\Delta = -0.012$).}
+Freezing the ML model at the LOO prior produces the most consistent degradation of any ablation:
+it hurts on 7 of 9 screens, with the largest losses on K562-GWPS ($-0.038$) and
+K562-Essential ($-0.025$).
+In the legacy predecessor's paired ablation, removing online retraining produced the largest average loss.
+
+\paragraph{The ``LLM'' branch ($\Delta = -0.008$ on average, but bimodal) --- and an important caveat.}
+C\,$-$\,LLM removes the entire LLM-branch endorsement term from the fusion. That term is \emph{not}
+purely the LLM: it also carries the static-ML padding described in Table~\ref{tab:main}$^\dagger$.
+The two screens with the largest effects are exactly the two with the most padding, so they must be
+read carefully:
+\begin{itemize}\itemsep2pt
+  \item \textbf{K562-Essential ($-0.127$): this is \emph{not} evidence for LLM biology.} 86\% of the
+  branch's genes there come from the static LOO ranker (the LLM names almost nothing that exists in
+  the 623-gene pool). What the ablation removes is the \emph{static cross-experiment prior} being
+  blended into the online model --- a real and valuable signal, but not LLM reasoning. We retract the
+  earlier reading of this number.
+  \item \textbf{Scharenberg22 ($+0.114$ when removed):} 68\% padding, so ``the LLM hurts here'' is
+  likewise mostly ``the static prior hurts here'', conflicting with an unusually strong online ML
+  signal (LOO AUC $=0.825$ on K562 DepMap features).
+  \item \textbf{Steinhart ($-0.059$): this one does survive.} Padding is 43\%, so a majority of the
+  branch is genuine LLM naming, and the gene-name ablation below independently confirms it.
+\end{itemize}
+
+\noindent
+Steinhart is also where one would \emph{predict} the LLM to matter most, for a reason visible in
+Table~\ref{tab:datasets}: it is the gain-of-function (CRISPRa) screen, asking which genes make CAR-T
+cells resist exhaustion \emph{when over-expressed}, whereas every DepMap feature we use is derived
+from \emph{knockout} screens. A gene that is dispensable when deleted can still be potent when
+over-expressed --- IRF4, one of Steinhart's strongest hits, is essential in only 6\% of DepMap cell
+lines --- so the ML prior has little to say there, and the LLM's gene-name-conditioned parametric signal
+appears to fill part of the gap, although we cannot distinguish biological generalization from memorized
+associations. Consistently, Steinhart has both the lowest hit rate of the nine screens (0.8\%) and the
+largest gene-name-shuffle penalty ($-0.084$).
+
+\paragraph{Gene-name semantics ($\Delta = -0.010$; $-0.084$ on Steinhart) --- a probe of dependence on gene-name semantics.}
+This ablation is immune to the padding confound in a way C\,$-$\,LLM is not: the branch is still
+present and still padded, but the LLM can no longer recognise the genes it is naming. Performance
+collapses on Steinhart ($-0.084$) and drops on K562-Essential ($-0.051$), so the LLM's contribution
+on pathway-specific tasks is mediated by the \emph{gene names} rather than by the task description or by
+experimental feedback --- though whether that name-conditioned signal reflects biological generalization
+or memorized associations, this ablation cannot say. Scharenberg22 again improves ($+0.078$).
+
 \subsection*{Testing the explanation: is it the gain-of-function modality? (No.)}
 
 The story above rests on a sample of one: Steinhart is the only gain-of-function (CRISPRa) screen in
@@ -1305,7 +1310,8 @@ Scharenberg22, K562-GWPS & & \\
 \noindent
 This closes the loop on why Steinhart is the screen where the LLM matters most: it is precisely the
 screen where the ML model's single strongest feature family has been removed, leaving it with weak
-topological signal --- and the LLM's T-cell biology is what fills the gap.
+topological signal --- and a gene-name-conditioned parametric signal appears to fill part of the gap,
+although its origin cannot be distinguished from memorized associations.
 (K562-Essential drops DepMap for a different reason: it \emph{is} a curated essentiality screen, so a
 pan-cancer essentiality prior is close to a restatement of the label and adds nothing.)
 
@@ -1326,8 +1332,8 @@ close the gap.
 \centering
 \caption{%
   Tool-using agent vs.\ the deterministic pipeline (hit ratio @ R5).
-  The agent plans its own rounds and calls tools; the pipeline fuses online ML with LLM reasoning
-  under a fixed policy. The agent is \emph{worse on 8 of 9 screens}.
+  The agent plans its own rounds and calls tools; the pipeline fuses online ML with constrained LLM
+  endorsement under a fixed policy. The agent is \emph{worse on 8 of 9 screens}.
 }
 \label{tab:agent}
 \setlength{\tabcolsep}{8pt}
