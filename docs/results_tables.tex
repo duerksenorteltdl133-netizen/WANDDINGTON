@@ -114,6 +114,13 @@ essentiality features. Anchor-relative features are modality-agnostic --- they d
 biology, not on the direction of perturbation --- a property the reason-vs-recall analysis
 (Table~\ref{tab:reasoning}) relies on.
 
+\textbf{The reported system uses only the gene-intrinsic and metadata-selected DepMap features; it
+excludes the anchor-relative features entirely.} A leakage audit later found that $51\%$ of the anchors
+are themselves target hits (privileged information, \S\ref{sec:honest-router}), so the anchor-relative
+family is dropped from the final configuration and retained only in the legacy predecessor and the
+reason-vs-recall probe. Read the anchor features below, therefore, as historical candidates, not part of
+the reported prior.
+
 The \textbf{cross-experiment prior} is a leave-one-out (LOO) LightGBM classifier: to score a target
 screen it is trained on the \emph{other} screens' hit labels using the features above, with
 \texttt{scale\_pos\_weight} correcting the $\sim$5\% class imbalance (300 trees, learning rate 0.05, 31
@@ -216,7 +223,8 @@ unaided) does not help.
 \begin{tabbing}
 xx\=xx\=xx\=\kill
 Input: pool G, rounds R, batch B, screen s \\
-Pre-experiment: (w\_ml, w\_llm) from metadata (n\_pool, modality, cell line) \\
+Global fusion weight (w\_ml, w\_llm): preselected on NON-target screens (leave-one-out) \\
+Target feature policy: from pre-experiment metadata (modality, cell line); no anchor feats \\
 Prior p0 = LOO-LightGBM fit on OTHER screens' (features, label)\qquad// no target labels \\
 selected = \{\} \\
 for t = 1..R: \\
@@ -516,7 +524,11 @@ discoverer of new biology. We report it as exploratory (no tuning on it);
   \textbf{Bold} = best per row; \underline{underline} = second best.
   \\[2pt]
   $^\ddagger$\textbf{Column C is the final leakage-free Waddington} (non-target-selected weight, no anchor
-  features; 5 seeds; \S\ref{sec:honest-router}), avg $0.251$. The detailed ablations, attribution, and
+  features; 5 seeds; \S\ref{sec:honest-router}), avg $0.251$. \textbf{The LOO-LightGBM and OnlineAdapt
+  columns are benchmark baselines under a \emph{different} feature configuration}; the within-system
+  \emph{matched} prior (same no-anchor metadata features) is $0.231$, so the internal improvement is
+  $0.231\!\rightarrow\!0.251$ ($+0.020$, Table~\ref{tab:honest_router}), not $0.217\!\rightarrow\!0.251$.
+  The detailed ablations, attribution, and
   SHAP that follow were computed on the legacy target-aware routed configuration (avg $0.256$, no detected
   difference in aggregate; per-screen values in the reason-vs-recall table) and are kept as supporting
   analyses of that near-performing predecessor. Relative to the legacy variant the final system trades a
@@ -593,10 +605,11 @@ vs.\ Coreset       & $+0.117$ & $[+0.056, +0.185]$ & \textbf{9\,/\,0\,/\,0} \\
 \end{center}
 
 \noindent
-These are the \emph{final} 5-seed leakage-free system's paired deltas (not the legacy C). Every interval
-excludes zero, and the system beats every baseline on at least 8 of 9 screens. So the defensible statement
+These are the \emph{final} 5-seed leakage-free system's paired deltas (not the legacy C). All paired mean
+deltas are positive and their intervals exclude zero; Waddington wins on 6--9 of the nine screens,
+depending on the comparator (6/1/2 vs.\ Online ML, 9/0/0 vs.\ Coreset). So the defensible statement
 is not ``its mean is significantly higher'' --- with nine heterogeneous screens it is not --- but ``it
-improves on each baseline consistently, screen by screen.'' Reproduce with
+improves on each baseline consistently on the majority of screens.'' Reproduce with
 \texttt{python -m waddington\_select.\allowbreak analysis.\allowbreak final\_system\_stats}.
 
 \subsection*{Robustness to a leakage-free router}
@@ -717,7 +730,7 @@ configuration analysis} (variants share the legacy routed C-arm reference, which
 difference from the final system in aggregate). Colour states a fact about the \emph{variant} (it scored
 lower than the full arm), not a
 verdict on the component: a red ``$-$~online~ML'' means \emph{removing} online ML costs 0.012, i.e.\ it is
-the most valuable part.}
+the largest loss in this legacy ablation.}
 \label{fig:bars}
 \end{figure}
 
@@ -756,12 +769,14 @@ C\,$-$\,ML (static LOO\,+\,LLM)    & Combine LOO prior with LLM      & 0.247 & +
 \end{tabular}
 \end{table}
 
-Each component provides an additive gain: the cross-experiment LOO prior (+0.083) contributes most,
-followed by LLM endorsement (+0.022 when combined with the LOO prior),
-and online ML retraining (+0.009).
-Cross-experiment memory contributes exactly $0.000$ in this leave-one-out benchmark
-(paired ablation, Table~\ref{tab:ablation}),
-as the LLM's parametric knowledge already subsumes the explicit memory entries.
+This legacy stepwise analysis suggests that the cross-experiment prior is the dominant source of
+performance (+0.083), while LLM endorsement (+0.022 when combined with the LOO prior) and online ML
+retraining (+0.009) provide smaller increments under that configuration. These quantities are descriptive
+rather than a formal additive decomposition (the rows add components sequentially, the LLM is a parallel
+branch, and the comparisons are on the legacy configuration).
+The explicit cross-experiment memory module provides no measurable gain in this leave-one-out benchmark
+(paired ablation, Table~\ref{tab:ablation}); this is consistent with redundancy with the LLM's parametric
+knowledge, but could also reflect ineffective retrieval or use of the memory entries.
 
 % ─────────────────────────────────────────────────────────────────────────────
 % TABLE 4  Ablation study  (PAIRED)
@@ -814,7 +829,7 @@ change this conclusion --- correctness was never the bottleneck.
 Freezing the ML model at the LOO prior produces the most consistent degradation of any ablation:
 it hurts on 7 of 9 screens, with the largest losses on K562-GWPS ($-0.038$) and
 K562-Essential ($-0.025$).
-Online adaptation is the single most valuable component of the arm.
+In the legacy predecessor's paired ablation, removing online retraining produced the largest average loss.
 
 \paragraph{The ``LLM'' branch ($\Delta = -0.008$ on average, but bimodal) --- and an important caveat.}
 C\,$-$\,LLM removes the entire LLM-branch endorsement term from the fusion. That term is \emph{not}
@@ -840,16 +855,18 @@ Table~\ref{tab:datasets}: it is the gain-of-function (CRISPRa) screen, asking wh
 cells resist exhaustion \emph{when over-expressed}, whereas every DepMap feature we use is derived
 from \emph{knockout} screens. A gene that is dispensable when deleted can still be potent when
 over-expressed --- IRF4, one of Steinhart's strongest hits, is essential in only 6\% of DepMap cell
-lines --- so the ML prior has little to say there, and the LLM's biological knowledge is what fills
-the gap. Consistently, Steinhart has both the lowest hit rate of the nine screens (0.8\%) and the
+lines --- so the ML prior has little to say there, and the LLM's gene-name-conditioned parametric signal
+appears to fill part of the gap, although we cannot distinguish biological generalization from memorized
+associations. Consistently, Steinhart has both the lowest hit rate of the nine screens (0.8\%) and the
 largest gene-name-shuffle penalty ($-0.084$).
 
-\paragraph{Gene-name semantics ($\Delta = -0.010$; $-0.084$ on Steinhart) --- the clean probe of LLM biology.}
+\paragraph{Gene-name semantics ($\Delta = -0.010$; $-0.084$ on Steinhart) --- a probe of dependence on gene-name semantics.}
 This ablation is immune to the padding confound in a way C\,$-$\,LLM is not: the branch is still
 present and still padded, but the LLM can no longer recognise the genes it is naming. Performance
 collapses on Steinhart ($-0.084$) and drops on K562-Essential ($-0.051$), so the LLM's contribution
-on pathway-specific tasks is genuinely mediated by \emph{biological gene-name knowledge} rather than
-by the task description or by experimental feedback. Scharenberg22 again improves ($+0.078$).
+on pathway-specific tasks is mediated by the \emph{gene names} rather than by the task description or by
+experimental feedback --- though whether that name-conditioned signal reflects biological generalization
+or memorized associations, this ablation cannot say. Scharenberg22 again improves ($+0.078$).
 
 \subsection*{Reasoning vs.\ recall: can structure replace the gene name?}
 
