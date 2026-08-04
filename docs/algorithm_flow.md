@@ -7,7 +7,8 @@
 
 > **问题**:顺序式 CRISPR 筛选设计。一个筛选有 ~18,000 个基因,只有 ~2–10% 是"命中"。每轮只能测一批(128 个,小筛选 32 个),测完才知道哪些命中,据此挑下一批。
 > **目标**:5 轮内最大化命中率 `hit@R5`(= 累计命中 / 总命中)。
-> **核心系统 = C-arm,当前 hit@R5 = 0.256**(纯 ML 先验 0.217,加随机 0.066)。
+> **核心系统 = C-arm,报告的无泄漏配置 hit@R5 = 0.251**(纯 ML 先验 0.217,加随机 0.066;
+> 早期读取目标真实 hit rate 的 legacy target-aware 路由为 0.256,两者无检测到差异,不作为最终系统)。
 
 ---
 
@@ -24,10 +25,10 @@ flowchart TB
 
   prep --> route
 
-  subgraph route["② 两个路由（跑之前定好）"]
+  subgraph route["② 默认配置（无泄漏，跑之前定好，不读目标标签）"]
     direction LR
-    r1["融合路由 _classify(n, hit_rate)<br/>ml_heavy / two_stage / baseline<br/>→ 决定 w_ML : w_LLM"]
-    r2["特征路由 _get_feature_config<br/>gain-of-function / 必需性筛选<br/>→ 丢掉 DepMap"]
+    r1["全局融合权重（每个筛选相同）<br/>w_ML : w_LLM = 0.8 : 0.2<br/>+ 丢弃 anchor-relative 特征"]
+    r2["特征策略 _get_feature_config<br/>仅按元数据（modality / 必需性面板 / 细胞系）<br/>→ 是否用 DepMap"]
   end
 
   route --> loop
@@ -61,9 +62,9 @@ flowchart TB
   ml --> fuse
   llm --> fuse
 
-  fuse{"融合<br/>（按融合路由）"}
-  fuse -->|weighted| w["score = w_ML·ml_score<br/>+ w_LLM·(基因是否被 LLM 点名)<br/>取 top-batch"]
-  fuse -->|two_stage| t["ML 先给 384 个候选短名单<br/>→ LLM 在里面挑最终 batch"]
+  fuse{"融合<br/>（默认：全局加权 0.8 : 0.2）"}
+  fuse -->|默认加权| w["score = w_ML·ml_score<br/>+ w_LLM·(基因是否被 LLM 点名)<br/>取 top-batch"]
+  fuse -->|legacy two_stage| t["ML 先给 384 个候选短名单<br/>→ LLM 在里面挑最终 batch"]
 
   w --> batch["✅ 下一批要测的基因"]
   t --> batch
@@ -73,7 +74,17 @@ flowchart TB
 
 ---
 
-## 三、两个路由的具体规则
+## 三、路由规则
+
+### 默认(报告的无泄漏系统,0.251)—— 不读目标筛选的任何真实标签
+
+- **融合**:全局固定权重 `w_ML : w_LLM = 0.8 : 0.2`,**每个筛选相同**(无 hit-rate 触发的 ml_heavy / two_stage)。
+- **特征策略**:仅按**元数据**(perturbation modality / 是否策展必需性面板 / 细胞系)决定用不用 DepMap,不看真实命中。
+- **anchor-relative 特征**:全部丢弃(泄漏审计发现 51% 的锚点自己就是目标命中,属特权信息)。
+
+### Legacy target-aware 路由(仅供分析,`WADDINGTON_LEGACY_ROUTER=1` 启用,avg 0.256)
+
+早期变体,**读取目标筛选的真实 hit rate** 来选路由——不作为最终系统(与 0.251 无检测到差异)。legacy 消融 / SHAP / 归因表基于此。
 
 **融合路由**(决定谁说了算):
 
@@ -83,7 +94,7 @@ flowchart TB
 | `two_stage` | 3000<n≤15000 且 hr>8% | — | ML 出短名单，LLM 定 |
 | `baseline` | 其余 | 0.6 : 0.4 | 加权 |
 
-**特征路由**(决定用不用敲除派生的 DepMap):
+**特征路由**(按数据集手工指定,用不用敲除派生的 DepMap):
 
 | 数据集 | 用的特征表 | 理由 |
 |---|---|---|
@@ -91,7 +102,7 @@ flowchart TB
 | K562-Essential（策展必需性）| v1，**无 DepMap** | 泛癌必需性≈把标签重说一遍 |
 | 其余 | v3，含 pan-cancer / K562 DepMap | 敲除先验有用 |
 
-> 这个特征路由是**凭经验试出来**的,后来才发现它对应一个真实机制:SHAP 显示,凡有 DepMap 的筛选,`depmap_frac_ess` 都是第一大特征;而 Steinhart / K562-Essential 上模型**一个 DepMap 特征都不用**。
+> 这个 legacy 特征路由是**凭经验试出来**的,后来才发现它对应一个真实机制:SHAP 显示,凡有 DepMap 的筛选,`depmap_frac_ess` 都是第一大特征;而 Steinhart / K562-Essential 上模型**一个 DepMap 特征都不用**。默认的元数据特征策略把这条经验规则改写成了只依赖 modality/必需性面板的**无标签**版本。
 
 ---
 
