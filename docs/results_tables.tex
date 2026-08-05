@@ -700,7 +700,36 @@ five-seed estimate ($+0.020$, $[0.007,0.035]$, 7/0/2) --- its lower bound rises 
 --- while every secondary comparison stays interval-excluded from zero (vs.\ external LOO $+0.036$, online
 ML $+0.028$, LLM branch $+0.031$, Coreset $+0.119$). The reported five-seed numbers are therefore not an
 artifact of the seed count; we keep them as the canonical result (matching the figures and released run
-files) and cite this 20-seed reproduction as a robustness check.
+files) and cite this 20-seed reproduction (per-screen values in Table~\ref{tab:seed20}) as a robustness
+check.
+
+\begin{table}[t]
+\centering
+\caption{\textbf{Per-screen hit@R5 at 20 seeds}, a robustness companion to the 5-seed
+Table~\ref{tab:main}. The four deterministic arms (Random / LOO / OnlineAdapt / Coreset) are unchanged
+from the 5-seed table; only the two LLM-driven arms (B, C) move, and within run-to-run noise. The 5-seed
+numbers remain the reported result; this table is supporting evidence only.}
+\label{tab:seed20}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccccc}
+\toprule
+Screen & Random & LOO-LightGBM & OnlineAdapt. & A: Coreset & B: LLM & C: Waddington \\
+\midrule
+IFN-$\gamma$   & 0.029 & 0.168 & 0.183 & 0.100 & 0.159 & 0.176 \\
+IL-2           & 0.031 & 0.306 & 0.314 & 0.139 & 0.259 & 0.326 \\
+Sanchez21      & 0.037 & 0.077 & 0.087 & 0.031 & 0.064 & 0.086 \\
+Sanchez21 (dn) & 0.029 & 0.091 & 0.101 & 0.078 & 0.068 & 0.091 \\
+Carnevale22    & 0.024 & 0.048 & 0.047 & 0.054 & 0.057 & 0.069 \\
+Scharenberg22  & 0.102 & 0.449 & 0.449 & 0.286 & 0.466 & 0.510 \\
+Steinhart      & 0.021 & 0.076 & 0.090 & 0.090 & 0.157 & 0.124 \\
+K562-Essential & 0.254 & 0.492 & 0.476 & 0.270 & 0.544 & 0.571 \\
+K562-GWPS      & 0.065 & 0.247 & 0.273 & 0.156 & 0.221 & 0.321 \\
+\midrule
+\textbf{Average} & 0.066 & 0.217 & 0.224 & 0.134 & 0.222 & \textbf{0.253} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \paragraph{The stricter test: deny the prior its siblings.} The variants above route honestly but still
 let the cross-experiment prior \emph{train on} same-study sibling screens. The strongest
