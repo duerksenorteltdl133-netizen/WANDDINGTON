@@ -691,6 +691,17 @@ ablations, attribution, and SHAP that were computed on it (no detected differenc
 supporting analyses of that near-performing predecessor, without assuming every component effect transfers
 quantitatively; the headline rests on the leakage-free system.
 
+\paragraph{Robustness to seed count.} Re-running the six main-table arms at 20 seeds rather than 5 leaves
+the four deterministic baselines unchanged to three decimals (Random $0.066$, Coreset $0.134$,
+LOO-LightGBM $0.217$, OnlineAdapt $0.224$); only the two LLM-driven arms move, and within run-to-run
+noise (Waddington $0.251\!\rightarrow\!0.253$, LLM branch $0.225\!\rightarrow\!0.222$). The within-system
+gain over the matched static prior is then $+0.022$ ($95\%$ CI $[0.012,0.036]$, 8/0/1), tightening the
+five-seed estimate ($+0.020$, $[0.007,0.035]$, 7/0/2) --- its lower bound rises from $0.007$ to $0.012$
+--- while every secondary comparison stays interval-excluded from zero (vs.\ external LOO $+0.036$, online
+ML $+0.028$, LLM branch $+0.031$, Coreset $+0.119$). The reported five-seed numbers are therefore not an
+artifact of the seed count; we keep them as the canonical result (matching the figures and released run
+files) and cite this 20-seed reproduction as a robustness check.
+
 \paragraph{The stricter test: deny the prior its siblings.} The variants above route honestly but still
 let the cross-experiment prior \emph{train on} same-study sibling screens. The strongest
 leave-one-study-out also removes the sibling from the prior itself. This does bite: the mean falls from
